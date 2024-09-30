@@ -12,6 +12,7 @@ type UserStore interface {
 type MessageStore interface {
 	SaveMessage(message *Message) error
 	GetMessages(chatID, limit, offset int) ([]*Message, error)
+	IsUserInChat(chatID int, userID int) (bool, error)
 }
 
 type ChatStore interface {

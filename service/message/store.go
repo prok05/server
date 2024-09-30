@@ -45,3 +45,10 @@ func (s *Store) GetMessages(chatID, limit, offset int) ([]*types.Message, error)
 	}
 	return messages, nil
 }
+
+func (s *Store) IsUserInChat(chatID int, userID int) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS (SELECT 1 FROM chat_members WHERE chat_id = $1 AND user_id = $2)`
+	err := s.pool.QueryRow(context.Background(), query, chatID, userID).Scan(&exists)
+	return exists, err
+}

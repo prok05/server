@@ -5,6 +5,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prok05/ecom/cmd/api"
 	"github.com/prok05/ecom/db"
+	"github.com/prok05/ecom/service/ws"
 	"log"
 )
 
@@ -19,7 +20,11 @@ func main() {
 
 	initStorage(dbpool)
 
-	server := api.NewAPIServer(":8080", dbpool)
+	// hub
+	hub := ws.NewHub()
+	go hub.Run()
+
+	server := api.NewAPIServer(":8080", dbpool, hub)
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
 	}

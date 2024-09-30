@@ -65,6 +65,18 @@ func (h *Handler) GetAllChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userIDStr, ok := jwtToken.Claims["userID"].(string)
+	if !ok {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid userID in claims"))
+		return
+	}
+
+	userID, err := strconv.Atoi(userIDStr) // преобразуем строку в int
+	if err != nil {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid userID format"))
+		return
+	}
+
 	chats, err := h.store.GetAllChats()
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)

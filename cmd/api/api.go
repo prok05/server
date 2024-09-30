@@ -6,6 +6,7 @@ import (
 	"github.com/prok05/ecom/service/lesson"
 	"github.com/prok05/ecom/service/message"
 	"github.com/prok05/ecom/service/user"
+	"github.com/prok05/ecom/service/ws"
 	"github.com/rs/cors"
 	"log"
 	"net/http"
@@ -14,12 +15,14 @@ import (
 type APIServer struct {
 	addr   string
 	dbpool *pgxpool.Pool
+	hub    *ws.Hub
 }
 
-func NewAPIServer(addr string, dbpool *pgxpool.Pool) *APIServer {
+func NewAPIServer(addr string, dbpool *pgxpool.Pool, hub *ws.Hub) *APIServer {
 	return &APIServer{
 		addr:   addr,
 		dbpool: dbpool,
+		hub:    hub,
 	}
 }
 
@@ -36,6 +39,8 @@ func (s *APIServer) Run() error {
 	messageStore := message.NewStore(s.dbpool)
 	messageHandler := message.NewHandler(messageStore)
 	messageHandler.RegisterRoutes(subrouter)
+
+	router.HandleFunc("/ws", ws.Handler(s.hub, messageStore))
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},                   // Разрешаем запросы только с фронтенда
