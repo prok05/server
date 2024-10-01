@@ -37,6 +37,14 @@ func NewHub() *Hub {
 	}
 }
 
+func NewClient(hub *Hub, conn *websocket.Conn) *Client {
+	return &Client{
+		conn:    conn,
+		send:    make(chan types.Message),
+		chatIDs: make(map[int]bool),
+	}
+}
+
 func ServeWS(hub *Hub, store types.MessageStore, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -209,13 +217,5 @@ func (c *Client) writePump() {
 			log.Println("Websocket write error:", err)
 			return
 		}
-	}
-}
-
-func NewClient(hub *Hub, conn *websocket.Conn) *Client {
-	return &Client{
-		conn:    conn,
-		send:    make(chan types.Message),
-		chatIDs: make(map[int]bool),
 	}
 }
