@@ -2,10 +2,12 @@ package chat
 
 import (
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 	"github.com/prok05/ecom/service/auth"
 	"github.com/prok05/ecom/types"
 	"github.com/prok05/ecom/utils"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -65,25 +67,43 @@ func (h *Handler) GetAllChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userIDStr, ok := jwtToken.Claims["userID"].(string)
+	claims, ok := jwtToken.Claims.(jwt.MapClaims)
 	if !ok {
-		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid userID in claims"))
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("no token"))
 		return
 	}
 
-	userID, err := strconv.Atoi(userIDStr) // преобразуем строку в int
+	userIDStr, ok := claims["userID"].(string)
+	if !ok {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid token"))
+		return
+	}
+
+	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
-		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid userID format"))
+		log.Printf("Unable to convert userID: %v", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	chats, err := h.store.GetAllChats()
+	var chats []types.Chat
+
+	chats, err = h.store.GetAllChats(userID)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, chats)
+	resp := types.AllChatsResponse{
+		Count: len(chats),
+		Items: chats,
+	}
+
+	if len(resp.Items) == 0 {
+		resp.Items = []types.Chat{}
+	}
+
+	utils.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) GetChatByID(w http.ResponseWriter, r *http.Request) {

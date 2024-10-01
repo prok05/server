@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/prok05/ecom/config"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -30,6 +31,7 @@ func CreateJWT(secret []byte, userID int) (string, error) {
 func GetTokenFromRequest(r *http.Request) string {
 	cookie, err := r.Cookie("token")
 	if err != nil {
+		log.Println(err)
 		return ""
 	}
 	return cookie.Value

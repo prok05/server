@@ -17,7 +17,7 @@ type MessageStore interface {
 
 type ChatStore interface {
 	CreateChat(chat *Chat) error
-	GetAllChats() ([]*Chat, error)
+	GetAllChats(userID int) ([]Chat, error)
 	GetChatByID(chatID int) (*Chat, error)
 	DeleteChat(chatID int) error
 }
@@ -46,6 +46,11 @@ type Chat struct {
 	ChatType  string    `json:"chat_type"`
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type AllChatsResponse struct {
+	Count int    `json:"count"`
+	Items []Chat `json:"items"`
 }
 
 type RegisterUserPayload struct {

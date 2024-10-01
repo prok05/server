@@ -45,21 +45,6 @@ func NewClient(hub *Hub, conn *websocket.Conn) *Client {
 	}
 }
 
-func ServeWS(hub *Hub, store types.MessageStore, w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("Ошибка при апгрейде соединения:", err)
-		return
-	}
-
-	client := NewClient(hub, conn)
-	hub.register <- client
-
-	// Запуск процессов чтения и записи для WebSocket клиента
-	go client.writePump()
-	go client.readPump(hub, store) // Передаем store
-}
-
 func (h *Hub) Run() {
 	for {
 		select {

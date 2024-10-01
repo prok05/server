@@ -28,8 +28,8 @@ func (s *Store) CreateChat(chat *types.Chat) error {
 	return nil
 }
 
-func (s *Store) GetAllChats(userID int) ([]*types.Chat, error) {
-	var chats []*types.Chat
+func (s *Store) GetAllChats(userID int) ([]types.Chat, error) {
+	var chats []types.Chat
 	query := "SELECT c.id, c.chat_type, c.name, c.created_at FROM chats c JOIN chat_members cm on c.id = cm.chat_id WHERE cm.user_id = $1"
 
 	rows, err := s.pool.Query(context.Background(), query, userID)
@@ -43,7 +43,7 @@ func (s *Store) GetAllChats(userID int) ([]*types.Chat, error) {
 		if err := rows.Scan(&chat.ID, &chat.ChatType, &chat.Name, &chat.CreatedAt); err != nil {
 			return nil, err
 		}
-		chats = append(chats, &chat)
+		chats = append(chats, chat)
 	}
 
 	if err = rows.Err(); err != nil {
