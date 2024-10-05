@@ -19,6 +19,30 @@ func NewStore(dbpool *pgxpool.Pool) *Store {
 	}
 }
 
+func (s *Store) GetAllTeachers() ([]*types.UserDTO, error) {
+	query := `SELECT id, first_name, last_name, middle_name, user_role FROM users WHERE user_role='teacher'`
+	rows, err := s.dbpool.Query(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var teachers []*types.UserDTO
+	for rows.Next() {
+		var teacher types.UserDTO
+		if err := rows.Scan(&teacher.ID, &teacher.FirstName, &teacher.LastName, &teacher.MiddleName, &teacher.Role); err != nil {
+			return nil, err
+		}
+		teachers = append(teachers, &teacher)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return teachers, nil
+}
+
 func (s *Store) FindUserByEmail(email string) (*types.User, error) {
 	//TODO implement me
 	panic("implement me")

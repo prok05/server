@@ -7,6 +7,7 @@ type UserStore interface {
 	FindUserByPhone(phone string) (*User, error)
 	FindUserByID(id int) (*User, error)
 	CreateUser(User) error
+	GetAllTeachers() ([]*UserDTO, error)
 }
 
 type MessageStore interface {
@@ -17,9 +18,10 @@ type MessageStore interface {
 
 type ChatStore interface {
 	CreateChat(chat *Chat) error
-	GetAllChats(userID int) ([]Chat, error)
+	GetAllChats(userID int) ([]AllChatsItem, error)
 	GetChatByID(chatID int) (*Chat, error)
 	DeleteChat(chatID int) error
+	GetChatParticipants(chatID int) ([]Participant, error)
 }
 
 type User struct {
@@ -31,6 +33,14 @@ type User struct {
 	Password   string    `json:"-"`
 	Role       string    `json:"role"`
 	CreatedAt  time.Time `json:"createdAt"`
+}
+
+type UserDTO struct {
+	ID         int    `json:"id"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	MiddleName string `json:"middle_name"`
+	Role       string `json:"role"`
 }
 
 type Message struct {
@@ -48,9 +58,30 @@ type Chat struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type ChatMember struct {
+	ID       int       `json:"id"`
+	ChatID   int       `json:"chat_id"`
+	UserID   int       `json:"user_id"`
+	JoinedAt time.Time `json:"joined_at"`
+}
+
+type Participant struct {
+	UserID    int    `json:"user_id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
 type AllChatsResponse struct {
-	Count int    `json:"count"`
-	Items []Chat `json:"items"`
+	Count int            `json:"count"`
+	Items []AllChatsItem `json:"items"`
+}
+
+type AllChatsItem struct {
+	ID           int           `json:"id"`
+	Name         string        `json:"name"`
+	ChatType     string        `json:"chat_type"`
+	LastMessage  Message       `json:"last_message"`
+	Participants []Participant `json:"participants"`
 }
 
 type RegisterUserPayload struct {

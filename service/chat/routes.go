@@ -86,7 +86,7 @@ func (h *Handler) GetAllChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var chats []types.Chat
+	var chats []types.AllChatsItem
 
 	chats, err = h.store.GetAllChats(userID)
 	if err != nil {
@@ -100,7 +100,7 @@ func (h *Handler) GetAllChats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(resp.Items) == 0 {
-		resp.Items = []types.Chat{}
+		resp.Items = []types.AllChatsItem{}
 	}
 
 	utils.WriteJSON(w, http.StatusOK, resp)

@@ -28,9 +28,16 @@ func (s *Store) CreateChat(chat *types.Chat) error {
 	return nil
 }
 
-func (s *Store) GetAllChats(userID int) ([]types.Chat, error) {
-	var chats []types.Chat
-	query := "SELECT c.id, c.chat_type, c.name, c.created_at FROM chats c JOIN chat_members cm on c.id = cm.chat_id WHERE cm.user_id = $1"
+func (s *Store) GetAllChats(userID int) ([]types.AllChatsItem, error) {
+	var chats []types.AllChatsItem
+	query := `
+		SELECT c.id, c.chat_type, c.name, COALESCE(m.content, ''), COALESCE(m.created_at, c.created_at)
+		FROM chats c
+		JOIN chat_members cm on c.id = cm.chat_id
+		LEFT JOIN messages m on m.id = (
+		    SELECT id FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1
+		)
+		WHERE cm.user_id = $1`
 
 	rows, err := s.pool.Query(context.Background(), query, userID)
 	if err != nil {
@@ -39,10 +46,18 @@ func (s *Store) GetAllChats(userID int) ([]types.Chat, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var chat types.Chat
-		if err := rows.Scan(&chat.ID, &chat.ChatType, &chat.Name, &chat.CreatedAt); err != nil {
+		var chat types.AllChatsItem
+		var lastMessage types.Message
+		if err := rows.Scan(&chat.ID, &chat.ChatType, &chat.Name, &lastMessage.Content, &lastMessage.CreatedAt); err != nil {
 			return nil, err
 		}
+		chat.LastMessage = lastMessage
+
+		participants, err := s.GetChatParticipants(chat.ID)
+		if err != nil {
+			return nil, err
+		}
+		chat.Participants = participants
 		chats = append(chats, chat)
 	}
 
@@ -51,6 +66,27 @@ func (s *Store) GetAllChats(userID int) ([]types.Chat, error) {
 	}
 
 	return chats, nil
+}
+
+func (s *Store) GetChatParticipants(chatID int) ([]types.Participant, error) {
+	var participants []types.Participant
+	query := `SELECT u.id, u.first_name, u.last_name FROM users u 
+    JOIN chat_members cm on u.id = cm.user_id WHERE cm.chat_id = $1`
+	rows, err := s.pool.Query(context.Background(), query, chatID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var participant types.Participant
+		if err := rows.Scan(&participant.UserID, &participant.FirstName, &participant.LastName); err != nil {
+			return nil, err
+		}
+		participants = append(participants, participant)
+	}
+
+	return participants, nil
 }
 
 func (s *Store) GetChatByID(chatID int) (*types.Chat, error) {
