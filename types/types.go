@@ -5,7 +5,7 @@ import "time"
 type UserStore interface {
 	FindUserByEmail(email string) (*User, error)
 	FindUserByPhone(phone string) (*User, error)
-	FindUserByID(id int) (*User, error)
+	FindUserByID(id int) (*UserDTO, error)
 	CreateUser(User) error
 	GetAllTeachers() ([]*UserDTO, error)
 }
@@ -37,6 +37,7 @@ type User struct {
 
 type UserDTO struct {
 	ID         int    `json:"id"`
+	Phone      string `json:"phone"`
 	FirstName  string `json:"first_name"`
 	LastName   string `json:"last_name"`
 	MiddleName string `json:"middle_name"`

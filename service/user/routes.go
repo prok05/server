@@ -30,6 +30,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/logout", h.handleLogout).Methods(http.MethodPost)
 
 	router.HandleFunc("/users/teachers", h.handleGetAllTeachers).Methods(http.MethodGet)
+	router.HandleFunc("/users/{userID}", h.handleGetUser).Methods(http.MethodGet)
 
 	router.HandleFunc("/alpha/users/{userID}", h.handleAlphaGetUser).Methods(http.MethodGet)
 }
@@ -166,7 +167,7 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (h *Handler) handleGetAllTeachers(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleGetUser(w http.ResponseWriter, r *http.Request) {
 	//tokenString := auth.GetTokenFromRequest(r)
 	//if tokenString == "" {
 	//	utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("missing or invalid JWT token"))
@@ -179,9 +180,46 @@ func (h *Handler) handleGetAllTeachers(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 
+	vars := mux.Vars(r)
+	str, ok := vars["userID"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing user ID"))
+		return
+	}
+
+	userID, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+		return
+	}
+
+	var user *types.UserDTO
+
+	user, err = h.store.FindUserByID(userID)
+	if err != nil {
+		utils.WriteError(w, http.StatusNotFound, err)
+		return
+	}
+
+	utils.WriteJSON(w, 200, user)
+}
+
+func (h *Handler) handleGetAllTeachers(w http.ResponseWriter, r *http.Request) {
+	tokenString := auth.GetTokenFromRequest(r)
+	if tokenString == "" {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("missing or invalid JWT token"))
+		return
+	}
+
+	jwtToken, err := auth.ValidateToken(tokenString)
+	if err != nil || !jwtToken.Valid {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid token"))
+		return
+	}
+
 	var teachers []*types.UserDTO
 
-	teachers, err := h.store.GetAllTeachers()
+	teachers, err = h.store.GetAllTeachers()
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting teachers"))
 	}
