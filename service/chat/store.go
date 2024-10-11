@@ -17,13 +17,22 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	}
 }
 
-func (s *Store) CreateChat(chat *types.Chat) error {
+func (s *Store) CreateChat(chat *types.Chat, members []int64) error {
 	err := s.pool.QueryRow(context.Background(),
 		"INSERT INTO chats (chat_type, name) VALUES ($1, $2) RETURNING id",
 		chat.ChatType, chat.Name).Scan(&chat.ID)
 	if err != nil {
 		log.Println(err)
 		return err
+	}
+
+	for _, memberID := range members {
+		_, err := s.pool.Exec(context.Background(),
+			`INSERT INTO chat_members (chat_id, user_id) VALUES ($1, $2)`, chat.ID, memberID)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
 	}
 	return nil
 }
