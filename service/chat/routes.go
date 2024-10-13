@@ -46,7 +46,9 @@ func (h *Handler) CreateChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.store.CreateChat(&chat); err != nil {
+	parts := []int64{1, 2, 3}
+
+	if err := h.store.CreateChat(&chat, parts); err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}

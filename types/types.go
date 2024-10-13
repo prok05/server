@@ -17,7 +17,7 @@ type MessageStore interface {
 }
 
 type ChatStore interface {
-	CreateChat(chat *Chat) error
+	CreateChat(chat *Chat, participants []int64) error
 	GetAllChats(userID int) ([]AllChatsItem, error)
 	GetChatByID(chatID int) (*Chat, error)
 	DeleteChat(chatID int) error
@@ -114,9 +114,10 @@ type GetUserResponse struct {
 }
 
 type GetUserResponseItem struct {
-	ID      int    `json:"id"`
-	Name    string `json:"name"`
-	Balance string `json:"balance"`
+	ID              int    `json:"id"`
+	Name            string `json:"name"`
+	Balance         string `json:"balance"`
+	PaidLessonCount int    `json:"paid_lesson_count"`
 }
 
 type GetLessonsPayload struct {
