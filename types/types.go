@@ -121,9 +121,11 @@ type GetUserResponseItem struct {
 }
 
 type GetLessonsPayload struct {
-	CustomerID int `json:"customer_id" validate:"required"`
-	Status     int `json:"status" validate:"required"`
-	Page       int `json:"page"`
+	CustomerID int    `json:"customer_id" validate:"required"`
+	Status     int    `json:"status" validate:"required"`
+	Page       int    `json:"page"`
+	DateFrom   string `json:"date_from"`
+	DateTo     string `json:"date_to"`
 }
 
 type GetLessonsResponse struct {
@@ -135,7 +137,7 @@ type GetLessonsResponse struct {
 
 type GetLessonsResponseItem struct {
 	ID         int      `json:"id"`
-	LessonType int      `json:"lesson_type_id"`
+	Status     int      `json:"status"`
 	Date       string   `json:"date"`
 	TimeFrom   string   `json:"time_from"`
 	TimeTo     string   `json:"time_to"`

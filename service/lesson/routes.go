@@ -8,36 +8,73 @@ import (
 	"github.com/prok05/ecom/utils"
 	"log"
 	"net/http"
+	"sync"
 )
 
 func RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/lessons/future", handleGetAllFutureLessons).Methods(http.MethodPost)
+	router.HandleFunc("/lessons/future", handleGetAllLessons).Methods(http.MethodPost)
 	//router.HandleFunc("/lessons/{userID}", h.handleRegister).Methods(http.MethodPost)
 }
 
-func handleGetAllFutureLessons(w http.ResponseWriter, r *http.Request) {
+func handleGetAllLessons(w http.ResponseWriter, r *http.Request) {
 	var payload types.GetLessonsPayload
 	if err := utils.ParseJSON(r, &payload); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 	}
 
-	fmt.Println(payload)
-
-	authToken, err := alpha.GetAlphaToken()
+	// получение токена alpha CRM
+	alphaToken, err := alpha.GetAlphaToken()
 	if err != nil {
-		log.Printf("Error getting alpha token: %v\n", err)
+		log.Printf("error getting alpha token: %v\n", err)
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting alpha token"))
 		return
 	}
+	lessons := []types.GetLessonsResponseItem{}
+	lessonsCh := make(chan []types.GetLessonsResponseItem, 3)
+	wg := sync.WaitGroup{}
+	wg.Add(3)
 
-	lessons, err := GetAllFutureLessons(payload.CustomerID, payload.Status, payload.Page, authToken)
-	if err != nil {
-		log.Printf("Error getting future lessons: %v\n", err)
-		return
+	go GetAlphaLessons(
+		payload.CustomerID,
+		1,
+		payload.Page,
+		alphaToken,
+		payload.DateFrom,
+		payload.DateTo,
+		&wg,
+		lessonsCh)
+	go GetAlphaLessons(
+		payload.CustomerID,
+		2,
+		payload.Page,
+		alphaToken,
+		payload.DateFrom,
+		payload.DateTo,
+		&wg,
+		lessonsCh)
+	go GetAlphaLessons(
+		payload.CustomerID,
+		3,
+		payload.Page,
+		alphaToken,
+		payload.DateFrom,
+		payload.DateTo,
+		&wg,
+		lessonsCh)
+	//if err != nil {
+	//	log.Printf("Error getting future lessons: %v\n", err)
+	//	return
+	//}
+
+	wg.Wait()
+	close(lessonsCh)
+	for v := range lessonsCh {
+		lessons = append(lessons, v...)
 	}
 
+	// ответ запроса
 	utils.WriteJSON(w, http.StatusOK, types.AllFutureLessonsResponse{
 		Count: len(lessons),
 		Items: lessons,
 	})
-
 }
