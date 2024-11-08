@@ -136,15 +136,18 @@ type GetLessonsResponse struct {
 }
 
 type GetLessonsResponseItem struct {
-	ID         int      `json:"id"`
-	Status     int      `json:"status"`
-	Date       string   `json:"date"`
-	TimeFrom   string   `json:"time_from"`
-	TimeTo     string   `json:"time_to"`
-	SubjectID  int      `json:"subject_id"`
-	RoomID     int      `json:"room_id"`
-	TeacherIDs []int    `json:"teacher_ids"`
-	Streaming  []string `json:"streaming"`
+	ID         int    `json:"id"`
+	Status     int    `json:"status"`
+	Date       string `json:"date"`
+	TimeFrom   string `json:"time_from"`
+	TimeTo     string `json:"time_to"`
+	SubjectID  int    `json:"subject_id"`
+	RoomID     int    `json:"room_id"`
+	TeacherIDs []int  `json:"teacher_ids"`
+	Streaming  any    `json:"streaming"`
+	Topic      string `json:"topic"`
+	Note       string `json:"note"`
+	Homework   any    `json:"homework"`
 }
 
 type AllFutureLessonsResponse struct {
