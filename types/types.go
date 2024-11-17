@@ -16,6 +16,11 @@ type MessageStore interface {
 	IsUserInChat(chatID int, userID int) (bool, error)
 }
 
+type HomeworkStore interface {
+	SaveHomework(homework *Homework) error
+	GetHomework(homeworkID int) (*Homework, error)
+}
+
 type ChatStore interface {
 	CreateChat(chat *Chat, participants []int64) error
 	GetAllChats(userID int) ([]AllChatsItem, error)
@@ -50,6 +55,15 @@ type Message struct {
 	SenderID  int       `json:"sender_id"`
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type Homework struct {
+	ID         int       `json:"id"`
+	StudentID  int       `json:"student_id"`
+	LessonID   int       `json:"lesson_id"`
+	TeacherID  int       `json:"teacher_id"`
+	FilePath   string    `json:"filepath"`
+	UploadedAt time.Time `json:"uploaded_at"`
 }
 
 type Chat struct {
@@ -149,6 +163,7 @@ type GetLessonsResponseItem struct {
 	Note           string `json:"note"`
 	Homework       any    `json:"homework"`
 	HomeworkStatus string `json:"custom_homework_status"`
+	TeachersID     []int  `json:"teachers_id"`
 }
 
 type AllFutureLessonsResponse struct {

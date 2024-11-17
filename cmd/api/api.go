@@ -4,6 +4,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prok05/ecom/service/chat"
+	"github.com/prok05/ecom/service/homework"
 	"github.com/prok05/ecom/service/lesson"
 	"github.com/prok05/ecom/service/message"
 	"github.com/prok05/ecom/service/user"
@@ -46,6 +47,10 @@ func (s *APIServer) Run() error {
 	chatStore := chat.NewStore(s.dbpool)
 	chatHandler := chat.NewHandler(chatStore)
 	chatHandler.RegisterRoutes(subrouter)
+
+	homeworkStore := homework.NewStore(s.dbpool)
+	homeworkHandler := homework.NewHandler(homeworkStore)
+	homeworkHandler.RegisterRoutes(subrouter)
 
 	router.HandleFunc("/ws", ws.Handler(s.hub, messageStore))
 
