@@ -13,7 +13,7 @@ import (
 
 func RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/lessons/future", handleGetAllLessons).Methods(http.MethodPost)
-	//router.HandleFunc("/lessons/{userID}", h.handleRegister).Methods(http.MethodPost)
+	router.HandleFunc("/lessons/teacher", handleGetAllLessonsTeacher).Methods(http.MethodPost)
 }
 
 func handleGetAllLessons(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +42,8 @@ func handleGetAllLessons(w http.ResponseWriter, r *http.Request) {
 		payload.DateFrom,
 		payload.DateTo,
 		&wg,
-		lessonsCh)
+		lessonsCh,
+		"student")
 	go GetAlphaLessons(
 		payload.CustomerID,
 		2,
@@ -51,7 +52,8 @@ func handleGetAllLessons(w http.ResponseWriter, r *http.Request) {
 		payload.DateFrom,
 		payload.DateTo,
 		&wg,
-		lessonsCh)
+		lessonsCh,
+		"student")
 	go GetAlphaLessons(
 		payload.CustomerID,
 		3,
@@ -60,11 +62,70 @@ func handleGetAllLessons(w http.ResponseWriter, r *http.Request) {
 		payload.DateFrom,
 		payload.DateTo,
 		&wg,
-		lessonsCh)
-	//if err != nil {
-	//	log.Printf("Error getting future lessons: %v\n", err)
-	//	return
-	//}
+		lessonsCh,
+		"student")
+
+	wg.Wait()
+	close(lessonsCh)
+	for v := range lessonsCh {
+		lessons = append(lessons, v...)
+	}
+
+	// ответ запроса
+	utils.WriteJSON(w, http.StatusOK, types.AllFutureLessonsResponse{
+		Count: len(lessons),
+		Items: lessons,
+	})
+}
+
+func handleGetAllLessonsTeacher(w http.ResponseWriter, r *http.Request) {
+	var payload types.GetLessonsPayload
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+	}
+
+	// получение токена alpha CRM
+	alphaToken, err := alpha.GetAlphaToken()
+	if err != nil {
+		log.Printf("error getting alpha token: %v\n", err)
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting alpha token"))
+		return
+	}
+	lessons := []types.GetLessonsResponseItem{}
+	lessonsCh := make(chan []types.GetLessonsResponseItem, 3)
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+
+	go GetAlphaLessons(
+		payload.TeacherID,
+		1,
+		payload.Page,
+		alphaToken,
+		payload.DateFrom,
+		payload.DateTo,
+		&wg,
+		lessonsCh,
+		"teacher")
+	go GetAlphaLessons(
+		payload.TeacherID,
+		2,
+		payload.Page,
+		alphaToken,
+		payload.DateFrom,
+		payload.DateTo,
+		&wg,
+		lessonsCh,
+		"teacher")
+	go GetAlphaLessons(
+		payload.TeacherID,
+		3,
+		payload.Page,
+		alphaToken,
+		payload.DateFrom,
+		payload.DateTo,
+		&wg,
+		lessonsCh,
+		"teacher")
 
 	wg.Wait()
 	close(lessonsCh)

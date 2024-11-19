@@ -17,7 +17,7 @@ type MessageStore interface {
 }
 
 type HomeworkStore interface {
-	SaveHomework(homework *Homework) error
+	SaveHomework(lessonID, studentID, teacherID int, filepath string) error
 	GetHomework(homeworkID int) (*Homework, error)
 }
 
@@ -135,7 +135,8 @@ type GetUserResponseItem struct {
 }
 
 type GetLessonsPayload struct {
-	CustomerID int    `json:"customer_id" validate:"required"`
+	CustomerID int    `json:"customer_id"`
+	TeacherID  int    `json:"teacher_id"`
 	Status     int    `json:"status" validate:"required"`
 	Page       int    `json:"page"`
 	DateFrom   string `json:"date_from"`

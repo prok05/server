@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS homeworks
 (
-    id          BIGINT PRIMARY KEY,
+    id          SERIAL PRIMARY KEY,
     student_id  BIGINT       NOT NULL,
     lesson_id   BIGINT       NOT NULL,
     teacher_id  BIGINT       NOT NULL,
