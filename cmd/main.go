@@ -10,8 +10,6 @@ import (
 )
 
 func main() {
-	// можно здесь инициализировать slog и потом передать его в структуру сервера api/
-
 	dbpool, err := db.NewPostgreSQLStorage()
 	if err != nil {
 		log.Fatal(err)
@@ -20,7 +18,6 @@ func main() {
 
 	initStorage(dbpool)
 
-	// hub
 	hub := ws.NewHub()
 	go hub.Run()
 

@@ -17,10 +17,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//defer dbpool.Close()
 
 	sqlDB := stdlib.OpenDBFromPool(dbpool)
-	//defer sqlDB.Close()
 
 	driver, err := pgx.WithInstance(sqlDB, &pgx.Config{})
 	if err != nil {
@@ -38,9 +36,6 @@ func main() {
 
 	cmd := os.Args[len(os.Args)-1]
 	if cmd == "up" {
-		//if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		//	log.Fatal(err)
-		//}
 		log.Println("Starting migration UP...")
 		err := m.Up()
 		if err != nil {

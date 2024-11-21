@@ -14,8 +14,6 @@ import (
 	"net/http"
 )
 
-// check git
-
 type APIServer struct {
 	addr   string
 	dbpool *pgxpool.Pool
@@ -31,7 +29,6 @@ func NewAPIServer(addr string, dbpool *pgxpool.Pool, hub *ws.Hub) *APIServer {
 }
 
 func (s *APIServer) Run() error {
-	// здесь можно будет поменять роутер
 	router := mux.NewRouter()
 	subrouter := router.PathPrefix("/api/v1").Subrouter()
 
