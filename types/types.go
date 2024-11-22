@@ -17,8 +17,13 @@ type MessageStore interface {
 }
 
 type HomeworkStore interface {
-	SaveHomework(lessonID, studentID, teacherID int, filepath string) error
-	GetHomework(homeworkID int) (*Homework, error)
+	SaveHomework(lessonID, studentID, teacherID int) (int, error)
+	SaveHomeworkFile(homeworkID int, filepath string) error
+	//GetHomework(homeworkID int) (*Homework, error)
+	GetHomeworksByLessonAndStudentID(studentID int, lessonIDs []int) (map[int]*HomeworkInfo, error)
+	GetHomeworkFilesByHomeworkID(homeworkID int) ([]HomeworkFile, error)
+	DeleteHomeworkFileByID(fileID int) error
+	GetHomeworkPathByID(fileID int) (string, error)
 }
 
 type ChatStore interface {
@@ -64,6 +69,11 @@ type Homework struct {
 	TeacherID  int       `json:"teacher_id"`
 	FilePath   string    `json:"filepath"`
 	UploadedAt time.Time `json:"uploaded_at"`
+}
+
+type HomeworkInfo struct {
+	ID     *int `json:"id"`
+	Status int  `json:"status"`
 }
 
 type Chat struct {
@@ -163,11 +173,18 @@ type GetLessonsResponseItem struct {
 	Topic          string `json:"topic"`
 	Note           string `json:"note"`
 	Homework       any    `json:"homework"`
-	HomeworkStatus string `json:"custom_homework_status"`
-	TeachersID     []int  `json:"teachers_id"`
+	HomeworkStatus int    `json:"homework_status"`
+	HomeworkID     *int   `json:"homework_id"`
 }
 
 type AllFutureLessonsResponse struct {
 	Count int                      `json:"count"`
 	Items []GetLessonsResponseItem `json:"items"`
+}
+
+// HOMEWORK
+
+type HomeworkFile struct {
+	ID       int    `json:"id"`
+	FilePath string `json:"file_path"`
 }

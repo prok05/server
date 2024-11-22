@@ -38,7 +38,6 @@ func (s *APIServer) Run() error {
 	userStore := user.NewStore(s.dbpool)
 	userHandler := user.NewHandler(userStore)
 	userHandler.RegisterRoutes(subrouter)
-	lesson.RegisterRoutes(subrouter)
 
 	messageStore := message.NewStore(s.dbpool)
 	messageHandler := message.NewHandler(messageStore)
@@ -51,6 +50,9 @@ func (s *APIServer) Run() error {
 	homeworkStore := homework.NewStore(s.dbpool)
 	homeworkHandler := homework.NewHandler(homeworkStore)
 	homeworkHandler.RegisterRoutes(subrouter)
+
+	lessonHandler := lesson.NewHandler(homeworkStore)
+	lessonHandler.RegisterRoutes(subrouter)
 
 	router.HandleFunc("/ws", ws.Handler(s.hub, messageStore))
 

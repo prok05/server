@@ -28,7 +28,7 @@ func main() {
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://cmd/migrate/migrations",
+		"file://migrate/migrations",
 		config.Envs.DBName,
 		driver,
 	)
