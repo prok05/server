@@ -166,6 +166,8 @@ func (h *Handler) handleGetHomeworkFiles(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	fmt.Println(homeworkFiles)
+
 	utils.WriteJSON(w, http.StatusOK, homeworkFiles)
 }
 
@@ -195,10 +197,23 @@ func (h *Handler) handleDeleteHomeworkFiles(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	err = h.store.DeleteHomeworkFileByID(fileID)
+	homeworkID, err := h.store.DeleteHomeworkFileByID(fileID)
 	if err != nil {
 		utils.WriteJSON(w, http.StatusInternalServerError, fmt.Errorf("error getting homework files"))
 		return
+	}
+
+	files, err := h.store.GetHomeworkFilesByHomeworkID(*homeworkID)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	if len(files) == 0 {
+		err = h.store.UpdateHomeworkStatus(*homeworkID, 3)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "file deleted successfully"})

@@ -19,10 +19,10 @@ type MessageStore interface {
 type HomeworkStore interface {
 	SaveHomework(lessonID, studentID, teacherID int) (int, error)
 	SaveHomeworkFile(homeworkID int, filepath string) error
-	//GetHomework(homeworkID int) (*Homework, error)
+	UpdateHomeworkStatus(homeworkID, status int) error
 	GetHomeworksByLessonAndStudentID(studentID int, lessonIDs []int) (map[int]*HomeworkInfo, error)
 	GetHomeworkFilesByHomeworkID(homeworkID int) ([]HomeworkFile, error)
-	DeleteHomeworkFileByID(fileID int) error
+	DeleteHomeworkFileByID(fileID int) (*int, error)
 	GetHomeworkPathByID(fileID int) (string, error)
 }
 

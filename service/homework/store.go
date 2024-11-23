@@ -32,6 +32,15 @@ func (s *Store) SaveHomework(lessonID, studentID, teacherID int) (int, error) {
 	return homeworkID, nil
 }
 
+func (s *Store) UpdateHomeworkStatus(homeworkID, status int) error {
+	_, err := s.dbpool.Exec(context.Background(), `UPDATE homeworks SET status = $1 WHERE id = $2`, status, homeworkID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
 func (s *Store) SaveHomeworkFile(homeworkID int, filepath string) error {
 	_, err := s.dbpool.Exec(context.Background(),
 		"INSERT INTO homework_files (homework_id, filepath) VALUES ($1, $2)",
@@ -84,7 +93,7 @@ func (s *Store) GetHomeworkFilesByHomeworkID(homeworkID int) ([]types.HomeworkFi
 	}
 	defer rows.Close()
 
-	var homeworkFiles []types.HomeworkFile
+	homeworkFiles := make([]types.HomeworkFile, 0)
 
 	for rows.Next() {
 		var homeworkFile types.HomeworkFile
@@ -112,14 +121,15 @@ func (s *Store) GetHomeworkPathByID(fileID int) (string, error) {
 	return filepath, nil
 }
 
-func (s *Store) DeleteHomeworkFileByID(fileID int) error {
-	_, err := s.dbpool.Exec(context.Background(),
-		`DELETE from homework_files WHERE id = $1`, fileID)
+func (s *Store) DeleteHomeworkFileByID(fileID int) (*int, error) {
+	var homeworkID int
+	err := s.dbpool.QueryRow(context.Background(),
+		`DELETE from homework_files WHERE id = $1 RETURNING homework_id`, fileID).Scan(&homeworkID)
 
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &homeworkID, nil
 }
