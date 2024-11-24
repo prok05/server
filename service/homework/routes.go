@@ -26,6 +26,7 @@ func NewHandler(store types.HomeworkStore) *Handler {
 func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/upload/homework", h.handleUploadHomework).Methods(http.MethodPost)
 	router.HandleFunc("/upload/homework-add", h.handleAddHomework).Methods(http.MethodPost)
+	router.HandleFunc("/homework/teacher", h.GetHomeworkTeacher).Methods(http.MethodPost)
 	router.HandleFunc("/homework/files/{homeworkID}", h.handleGetHomeworkFiles).Methods(http.MethodGet)
 	router.HandleFunc("/homework/files/{fileID}", h.handleDeleteHomeworkFiles).Methods(http.MethodDelete)
 	router.HandleFunc("/homework/file/{fileID}/download", h.handleDownloadHomeworkFile).Methods(http.MethodGet)
@@ -273,4 +274,18 @@ func (h *Handler) handleDownloadHomeworkFile(w http.ResponseWriter, r *http.Requ
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error writing file to response"))
 		return
 	}
+}
+
+func (h *Handler) GetHomeworkTeacher(w http.ResponseWriter, r *http.Request) {
+	var payload types.HomeworkPayload
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+	}
+
+	homeworks, err := h.store.GetHomeworksByTeacherAndLessonID(payload.LessonID, payload.TeacherID, payload.Students)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+	}
+
+	utils.WriteJSON(w, http.StatusOK, homeworks)
 }

@@ -133,3 +133,54 @@ func (s *Store) DeleteHomeworkFileByID(fileID int) (*int, error) {
 
 	return &homeworkID, nil
 }
+
+func (s *Store) GetHomeworksByTeacherAndLessonID(lessonID, teacherID int, studentIDs []int) ([]types.HomeworkResponse, error) {
+	query := `
+	SELECT 
+		u.first_name,
+		u.last_name,
+		h.id AS homework_id,
+		h.status AS homework_status,
+		COALESCE(array_agg(hf.id) FILTER (WHERE hf.id IS NOT NULL), '{}') AS file_ids
+	FROM 
+		homeworks h
+	JOIN 
+		users u ON h.student_id = u.id
+	LEFT JOIN 
+		homework_files hf ON h.id = hf.homework_id
+	WHERE 
+		h.lesson_id = $1
+		AND h.teacher_id = $2
+		AND (h.student_id = ANY($3))
+	GROUP BY 
+		u.first_name, u.last_name, h.id, h.status;
+	`
+
+	rows, err := s.dbpool.Query(context.Background(), query, lessonID, teacherID, studentIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+	defer rows.Close()
+
+	results := make([]types.HomeworkResponse, 0)
+
+	for rows.Next() {
+		var result types.HomeworkResponse
+		var fileIDs []int
+
+		err := rows.Scan(
+			&result.FirstName,
+			&result.LastName,
+			&result.HomeworkID,
+			&result.HomeworkStatus,
+			&fileIDs)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		result.Files = fileIDs
+		results = append(results, result)
+	}
+
+	return results, nil
+}
