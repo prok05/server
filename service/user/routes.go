@@ -253,17 +253,26 @@ func (h *Handler) handleAlphaGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	platformUser, err := h.store.FindUserByID(userID)
+	if err != nil {
+		log.Println(err)
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("cant find user in platform"))
+		return
+	}
+
 	token, err := alpha.GetAlphaToken()
 	if err != nil {
 		fmt.Printf("Error getting alpha token: %v\n", err)
 		return
 	}
 
-	alphaUser, err := alpha.GetUserById(userID, token)
+	alphaUser, err := alpha.GetUserById(userID, token, platformUser.Role)
 	if err != nil {
 		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("no users with such user id: %s", userID))
 		return
 	}
+
+	alphaUser.Role = platformUser.Role
 
 	utils.WriteJSON(w, http.StatusOK, alphaUser)
 }

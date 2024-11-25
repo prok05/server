@@ -27,6 +27,8 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/upload/homework", h.handleUploadHomework).Methods(http.MethodPost)
 	router.HandleFunc("/upload/homework-add", h.handleAddHomework).Methods(http.MethodPost)
 	router.HandleFunc("/homework/teacher", h.GetHomeworkTeacher).Methods(http.MethodPost)
+	router.HandleFunc("/homework/teacher/count", h.CountHomeworkWithStatus).Methods(http.MethodPost)
+	router.HandleFunc("/homework/{homeworkID}", h.handleUpdateHomeworkStatus).Methods(http.MethodPatch)
 	router.HandleFunc("/homework/files/{homeworkID}", h.handleGetHomeworkFiles).Methods(http.MethodGet)
 	router.HandleFunc("/homework/files/{fileID}", h.handleDeleteHomeworkFiles).Methods(http.MethodDelete)
 	router.HandleFunc("/homework/file/{fileID}/download", h.handleDownloadHomeworkFile).Methods(http.MethodGet)
@@ -144,7 +146,59 @@ func (h *Handler) handleAddHomework(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = h.store.UpdateHomeworkStatus(homeworkID, 2)
+
 	utils.WriteJSON(w, http.StatusCreated, "ok")
+}
+
+func (h *Handler) handleUpdateHomeworkStatus(w http.ResponseWriter, r *http.Request) {
+	var payload types.UpdateHomeworkPayload
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		log.Println("invalid payload")
+		return
+	}
+
+	vars := mux.Vars(r)
+	str, ok := vars["homeworkID"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing homework ID"))
+		log.Println("missind homeworkID")
+		return
+	}
+
+	homeworkID, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user homeworkID"))
+		log.Println("invalid homeworkID")
+		return
+	}
+
+	err = h.store.UpdateHomeworkStatus(homeworkID, payload.Status)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("cannot update homework"))
+		log.Println("cannot update homework")
+		return
+	}
+
+	if payload.Status == 1 || payload.Status == 4 {
+		files, err := h.store.GetHomeworkFilesByHomeworkID(homeworkID)
+		if err != nil {
+			log.Println("cant get homework files")
+			utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("cant get homework files"))
+			return
+		}
+		for _, v := range files {
+			_, err = h.store.DeleteHomeworkFileByID(v.ID)
+			if err != nil {
+				log.Println(err)
+			}
+			if err := os.Remove(v.FilePath); err != nil {
+				log.Printf("error deleting file: %v\n", err)
+			}
+		}
+	}
+	utils.WriteJSON(w, http.StatusOK, "ok")
 }
 
 func (h *Handler) handleGetHomeworkFiles(w http.ResponseWriter, r *http.Request) {
@@ -211,7 +265,8 @@ func (h *Handler) handleDeleteHomeworkFiles(w http.ResponseWriter, r *http.Reque
 	}
 
 	if len(files) == 0 {
-		err = h.store.UpdateHomeworkStatus(*homeworkID, 3)
+		//err = h.store.UpdateHomeworkStatus(*homeworkID, 3)
+		err = h.store.DeleteHomework(*homeworkID)
 		if err != nil {
 			log.Println(err)
 		}
@@ -288,4 +343,18 @@ func (h *Handler) GetHomeworkTeacher(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusOK, homeworks)
+}
+
+func (h *Handler) CountHomeworkWithStatus(w http.ResponseWriter, r *http.Request) {
+	var payload types.HomeworkPayload
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+	}
+
+	count, err := h.store.CountHomeworksWithStatus(payload.LessonID, payload.TeacherID, payload.Status)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]int{"count": count})
 }

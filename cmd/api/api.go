@@ -54,10 +54,12 @@ func (s *APIServer) Run() error {
 	router.HandleFunc("/ws", ws.Handler(s.hub, messageStore))
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},                   // Разрешаем запросы только с фронтенда
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Разрешаемые методы
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},           // Разрешаемые заголовки
-		AllowCredentials: true,                                                // Разрешение для отправки куков и других креденшалов
+		//AllowedOrigins:   []string{"http://localhost:3000"},                            // Разрешаем запросы только с фронтенда
+		AllowedOrigins:   []string{"http://93.183.81.6:3000"},                          // Разрешаем запросы только с фронтенда
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}, // Разрешаемые методы
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		ExposedHeaders:   []string{"Content-Disposition"}, // Разрешаемые заголовки
+		AllowCredentials: true,                            // Разрешение для отправки куков и других креденшалов
 	})
 
 	handler := c.Handler(router)

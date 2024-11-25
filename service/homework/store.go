@@ -32,6 +32,15 @@ func (s *Store) SaveHomework(lessonID, studentID, teacherID int) (int, error) {
 	return homeworkID, nil
 }
 
+func (s *Store) DeleteHomework(homeworkID int) error {
+	_, err := s.dbpool.Exec(context.Background(), `DELETE FROM homeworks WHERE id = $1`, homeworkID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
 func (s *Store) UpdateHomeworkStatus(homeworkID, status int) error {
 	_, err := s.dbpool.Exec(context.Background(), `UPDATE homeworks SET status = $1 WHERE id = $2`, status, homeworkID)
 	if err != nil {
@@ -39,6 +48,18 @@ func (s *Store) UpdateHomeworkStatus(homeworkID, status int) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Store) CountHomeworksWithStatus(lessonID, teacherID, status int) (int, error) {
+	var count int
+	err := s.dbpool.QueryRow(context.Background(),
+		"SELECT COUNT(*) FROM homeworks WHERE lesson_id = $1 AND teacher_id = $2 AND status = $3",
+		lessonID, teacherID, status).Scan(&count)
+	if err != nil {
+		log.Println("Error counting homeworks:", err)
+		return 0, err
+	}
+	return count, nil
 }
 
 func (s *Store) SaveHomeworkFile(homeworkID int, filepath string) error {
@@ -80,8 +101,6 @@ func (s *Store) GetHomeworksByLessonAndStudentID(studentID int, lessonIDs []int)
 
 	return homeworks, nil
 }
-
-//func (s *Store) GetHomework(homeworkID int) ([]types.HomeworkFile, error) {
 
 func (s *Store) GetHomeworkFilesByHomeworkID(homeworkID int) ([]types.HomeworkFile, error) {
 	rows, err := s.dbpool.Query(context.Background(),

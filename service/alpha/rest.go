@@ -61,8 +61,13 @@ func GetUserIDByPhone(phone, role, token string) (*types.GetUserResponseItem, er
 	return &getUserResponse.Items[0], nil
 }
 
-func GetUserById(id int, token string) (*types.GetUserResponseItem, error) {
-	url := "https://centriym.s20.online/v2api/1/customer/index"
+func GetUserById(id int, token, role string) (*types.GetUserResponseItem, error) {
+	var url string
+	if role == "student" {
+		url = "https://centriym.s20.online/v2api/1/customer/index"
+	} else if role == "teacher" {
+		url = "https://centriym.s20.online/v2api/1/teacher/index"
+	}
 
 	request := map[string]int{
 		"id": id,

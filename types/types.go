@@ -18,8 +18,10 @@ type MessageStore interface {
 
 type HomeworkStore interface {
 	SaveHomework(lessonID, studentID, teacherID int) (int, error)
+	DeleteHomework(homeworkID int) error
 	SaveHomeworkFile(homeworkID int, filepath string) error
 	UpdateHomeworkStatus(homeworkID, status int) error
+	CountHomeworksWithStatus(lessonID, teacherID, status int) (int, error)
 	GetHomeworksByLessonAndStudentID(studentID int, lessonIDs []int) (map[int]*HomeworkInfo, error)
 	GetHomeworkFilesByHomeworkID(homeworkID int) ([]HomeworkFile, error)
 	DeleteHomeworkFileByID(fileID int) (*int, error)
@@ -122,6 +124,7 @@ type LoginUserPayload struct {
 }
 
 // Alpha CRM
+
 type AlphaAuthRequest struct {
 	Email  string `json:"email"`
 	APIKey string `json:"api_key"`
@@ -143,6 +146,7 @@ type GetUserResponseItem struct {
 	Name            string `json:"name"`
 	Balance         string `json:"balance"`
 	PaidLessonCount int    `json:"paid_lesson_count"`
+	Role            string `json:"role"`
 }
 
 type GetLessonsPayload struct {
@@ -189,7 +193,12 @@ type AllFutureLessonsResponse struct {
 type HomeworkPayload struct {
 	TeacherID int   `json:"teacher_id"`
 	LessonID  int   `json:"lesson_id"`
+	Status    int   `json:"status"`
 	Students  []int `json:"student_ids"`
+}
+
+type UpdateHomeworkPayload struct {
+	Status int `json:"status"`
 }
 
 type HomeworkResponse struct {
