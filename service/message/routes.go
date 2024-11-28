@@ -3,6 +3,7 @@ package message
 import (
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/prok05/ecom/cache"
 	"github.com/prok05/ecom/service/auth"
 	"github.com/prok05/ecom/types"
 	"github.com/prok05/ecom/utils"
@@ -11,11 +12,15 @@ import (
 )
 
 type Handler struct {
-	store types.MessageStore
+	store      types.MessageStore
+	tokenCache *cache.TokenCache
 }
 
-func NewHandler(store types.MessageStore) *Handler {
-	return &Handler{store: store}
+func NewHandler(store types.MessageStore, tokenCache *cache.TokenCache) *Handler {
+	return &Handler{
+		store:      store,
+		tokenCache: tokenCache,
+	}
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {

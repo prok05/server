@@ -108,3 +108,5 @@ func GetUserById(id int, token, role string) (*types.GetUserResponseItem, error)
 	}
 	return &getUserResponse.Items[0], nil
 }
+
+//func GetStudentsTeachers(token string)

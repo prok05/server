@@ -10,12 +10,13 @@ import (
 	"time"
 )
 
-func CreateJWT(secret []byte, userID int) (string, error) {
+func CreateJWT(secret []byte, userID int, role string) (string, error) {
 	expiration := time.Second * time.Duration(config.Envs.JWTExpirationInSeconds)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"userID":    strconv.Itoa(userID),
 		"expiredAt": time.Now().Add(expiration).Unix(),
+		"role":      role,
 	})
 
 	tokenString, err := token.SignedString(secret)

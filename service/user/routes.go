@@ -63,7 +63,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	secret := []byte(config.Envs.JWTSecret)
-	token, err := auth.CreateJWT(secret, u.ID)
+	token, err := auth.CreateJWT(secret, u.ID, u.Role)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
@@ -73,14 +73,13 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Name:     "token",
 		Value:    token,
 		Expires:  time.Now().Add(24 * time.Hour * 30),
-		HttpOnly: true,  // Куки недоступны для JS
-		Secure:   false, // Используйте true при HTTPS
+		HttpOnly: true,
+		Secure:   false,
 		Path:     "/",
 	})
 
 	//utils.WriteJSON(w, http.StatusOK, map[string]string{"token": token})
 	utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "login successful"})
-
 }
 
 // Регистрация пользователя

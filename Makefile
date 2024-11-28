@@ -4,7 +4,7 @@ run: build
 migration:
 	@migrate create -ext sql -dir migrate/migrations $(filter-out $@,$(MAKECMDGOALS))
 
-start-dev:
+dev:
 	@go run cmd/main.go
 
 migrate-up:

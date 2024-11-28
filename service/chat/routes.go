@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
+	"github.com/prok05/ecom/cache"
 	"github.com/prok05/ecom/service/auth"
+	"github.com/prok05/ecom/service/lesson"
 	"github.com/prok05/ecom/types"
 	"github.com/prok05/ecom/utils"
 	"log"
@@ -13,11 +15,15 @@ import (
 )
 
 type Handler struct {
-	store types.ChatStore
+	store      types.ChatStore
+	tokenCache *cache.TokenCache
 }
 
-func NewHandler(store types.ChatStore) *Handler {
-	return &Handler{store: store}
+func NewHandler(store types.ChatStore, tokenCache *cache.TokenCache) *Handler {
+	return &Handler{
+		store:      store,
+		tokenCache: tokenCache,
+	}
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
@@ -88,24 +94,38 @@ func (h *Handler) GetAllChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var chats []types.AllChatsItem
-
-	chats, err = h.store.GetAllChats(userID)
+	token, err := h.tokenCache.GetToken()
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err)
+		log.Println("no alpha token")
 		return
 	}
 
-	resp := types.AllChatsResponse{
-		Count: len(chats),
-		Items: chats,
+	teachers, err := lesson.GetStudentTeachersIDs(userID, 3, 0, token)
+	if err != nil {
+		log.Println(err)
 	}
 
-	if len(resp.Items) == 0 {
-		resp.Items = []types.AllChatsItem{}
-	}
+	fmt.Println(teachers)
 
-	utils.WriteJSON(w, http.StatusOK, resp)
+	//
+	//var chats []types.AllChatsItem
+	//
+	//chats, err = h.store.GetAllChats(userID)
+	//if err != nil {
+	//	utils.WriteError(w, http.StatusInternalServerError, err)
+	//	return
+	//}
+	//
+	//resp := types.AllChatsResponse{
+	//	Count: len(chats),
+	//	Items: chats,
+	//}
+	//
+	//if len(resp.Items) == 0 {
+	//	resp.Items = []types.AllChatsItem{}
+	//}
+	//
+	//utils.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) GetChatByID(w http.ResponseWriter, r *http.Request) {

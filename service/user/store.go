@@ -87,6 +87,26 @@ func (s *Store) FindUserByID(id int) (*types.UserDTO, error) {
 	return u, nil
 }
 
+func (s *Store) FindUsersByIDs(id int) ([]*types.UserDTO, error) {
+	rows, err := s.dbpool.Query(context.Background(),
+		"SELECT id, phone, first_name, middle_name, last_name, user_role FROM users WHERE id = $1", id)
+	if err != nil {
+		return nil, err
+	}
+	users := make([]types.UserDTO, 0)
+
+	for rows.Next() {
+		u :=
+		if err := rows.Scan(&u.ID, &u.Phone, &u.FirstName, &u.MiddleName, &u.LastName, &u.Role); err != nil {
+			return nil, err
+		}
+	}
+	if u.ID == 0 {
+		return nil, fmt.Errorf("user not found")
+	}
+	return u, nil
+}
+
 func (s *Store) CreateUser(user types.User) error {
 	_, err := s.dbpool.Exec(context.Background(),
 		"INSERT INTO users (id, phone, password, first_name, last_name, middle_name, user_role) VALUES ($1, $2, $3, $4, $5, $6, $7)",

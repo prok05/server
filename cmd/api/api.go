@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prok05/ecom/cache"
 	"github.com/prok05/ecom/service/chat"
 	"github.com/prok05/ecom/service/homework"
 	"github.com/prok05/ecom/service/lesson"
@@ -15,16 +16,18 @@ import (
 )
 
 type APIServer struct {
-	addr   string
-	dbpool *pgxpool.Pool
-	hub    *ws.Hub
+	addr       string
+	dbpool     *pgxpool.Pool
+	hub        *ws.Hub
+	tokenCache *cache.TokenCache
 }
 
-func NewAPIServer(addr string, dbpool *pgxpool.Pool, hub *ws.Hub) *APIServer {
+func NewAPIServer(addr string, dbpool *pgxpool.Pool, hub *ws.Hub, tokenCache *cache.TokenCache) *APIServer {
 	return &APIServer{
-		addr:   addr,
-		dbpool: dbpool,
-		hub:    hub,
+		addr:       addr,
+		dbpool:     dbpool,
+		hub:        hub,
+		tokenCache: tokenCache,
 	}
 }
 
@@ -37,11 +40,11 @@ func (s *APIServer) Run() error {
 	userHandler.RegisterRoutes(subrouter)
 
 	messageStore := message.NewStore(s.dbpool)
-	messageHandler := message.NewHandler(messageStore)
+	messageHandler := message.NewHandler(messageStore, s.tokenCache)
 	messageHandler.RegisterRoutes(subrouter)
 
 	chatStore := chat.NewStore(s.dbpool)
-	chatHandler := chat.NewHandler(chatStore)
+	chatHandler := chat.NewHandler(chatStore, s.tokenCache)
 	chatHandler.RegisterRoutes(subrouter)
 
 	homeworkStore := homework.NewStore(s.dbpool)
@@ -54,8 +57,8 @@ func (s *APIServer) Run() error {
 	router.HandleFunc("/ws", ws.Handler(s.hub, messageStore))
 
 	c := cors.New(cors.Options{
-		//AllowedOrigins:   []string{"http://localhost:3000"},                            // Разрешаем запросы только с фронтенда
-		AllowedOrigins:   []string{"http://93.183.81.6:3000"},                          // Разрешаем запросы только с фронтенда
+		AllowedOrigins: []string{"http://localhost:3000"}, // Разрешаем запросы только с фронтенда
+		//AllowedOrigins:   []string{"http://93.183.81.6:3000"},                          // Разрешаем запросы только с фронтенда
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}, // Разрешаемые методы
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		ExposedHeaders:   []string{"Content-Disposition"}, // Разрешаемые заголовки
@@ -64,7 +67,7 @@ func (s *APIServer) Run() error {
 
 	handler := c.Handler(router)
 
-	log.Println(" Listening on:", s.addr)
+	log.Println("Listening on:", s.addr)
 
 	return http.ListenAndServe(s.addr, handler)
 }
