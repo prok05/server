@@ -39,12 +39,12 @@ func (s *APIServer) Run() error {
 	userHandler := user.NewHandler(userStore)
 	userHandler.RegisterRoutes(subrouter)
 
+	chatStore := chat.NewStore(s.dbpool)
 	messageStore := message.NewStore(s.dbpool)
-	messageHandler := message.NewHandler(messageStore, s.tokenCache)
+	messageHandler := message.NewHandler(messageStore, chatStore, s.tokenCache)
 	messageHandler.RegisterRoutes(subrouter)
 
-	chatStore := chat.NewStore(s.dbpool)
-	chatHandler := chat.NewHandler(chatStore, s.tokenCache)
+	chatHandler := chat.NewHandler(chatStore, userStore, messageStore, s.tokenCache)
 	chatHandler.RegisterRoutes(subrouter)
 
 	homeworkStore := homework.NewStore(s.dbpool)

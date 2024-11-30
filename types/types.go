@@ -8,6 +8,7 @@ type UserStore interface {
 	FindUserByID(id int) (*UserDTO, error)
 	CreateUser(User) error
 	GetAllTeachers() ([]*UserDTO, error)
+	FindUsersByIDs(ids []int) (*[]UserDTO, error)
 }
 
 type MessageStore interface {
@@ -30,11 +31,12 @@ type HomeworkStore interface {
 }
 
 type ChatStore interface {
-	CreateChat(chat *Chat, participants []int64) error
+	CreateChat(chat *Chat, participants []int) error
 	GetAllChats(userID int) ([]AllChatsItem, error)
 	GetChatByID(chatID int) (*Chat, error)
 	DeleteChat(chatID int) error
 	GetChatParticipants(chatID int) ([]Participant, error)
+	GetChatByUserIDs(user1ID, user2ID int) (*Chat, error)
 }
 
 type User struct {
@@ -63,6 +65,11 @@ type Message struct {
 	SenderID  int       `json:"sender_id"`
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type MessagePayload struct {
+	UserID  int     `json:"user_id"`
+	Message Message `json:"message"`
 }
 
 type Homework struct {

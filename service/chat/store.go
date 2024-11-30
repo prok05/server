@@ -2,6 +2,8 @@ package chat
 
 import (
 	"context"
+	"errors"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prok05/ecom/types"
 	"log"
@@ -17,7 +19,7 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	}
 }
 
-func (s *Store) CreateChat(chat *types.Chat, members []int64) error {
+func (s *Store) CreateChat(chat *types.Chat, members []int) error {
 	err := s.pool.QueryRow(context.Background(),
 		"INSERT INTO chats (chat_type, name) VALUES ($1, $2) RETURNING id",
 		chat.ChatType, chat.Name).Scan(&chat.ID)
@@ -38,7 +40,7 @@ func (s *Store) CreateChat(chat *types.Chat, members []int64) error {
 }
 
 func (s *Store) GetAllChats(userID int) ([]types.AllChatsItem, error) {
-	var chats []types.AllChatsItem
+	chats := make([]types.AllChatsItem, 0)
 	query := `
 		SELECT c.id, c.chat_type, c.name, COALESCE(m.content, ''), COALESCE(m.created_at, c.created_at)
 		FROM chats c
@@ -105,6 +107,30 @@ func (s *Store) GetChatByID(chatID int) (*types.Chat, error) {
 	if err != nil {
 		return nil, err
 	}
+	return &chat, nil
+}
+
+func (s *Store) GetChatByUserIDs(user1ID, user2ID int) (*types.Chat, error) {
+	query := `
+		SELECT c.id, c.chat_type, c.name, c.created_at
+		FROM chats c
+		JOIN chat_members cm1 ON c.id = cm1.chat_id
+		JOIN chat_members cm2 ON c.id = cm2.chat_id
+		WHERE cm1.user_id = $1 AND cm2.user_id = $2
+		LIMIT 1;
+	`
+
+	var chat types.Chat
+	err := s.pool.QueryRow(context.Background(), query, user1ID, user2ID).Scan(
+		&chat.ID, &chat.ChatType, &chat.Name, &chat.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
 	return &chat, nil
 }
 

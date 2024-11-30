@@ -2,6 +2,7 @@ package message
 
 import (
 	"context"
+	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prok05/ecom/types"
 	"log"
@@ -29,9 +30,10 @@ func (s *Store) SaveMessage(message *types.Message) error {
 }
 
 func (s *Store) GetMessages(chatID, limit, offset int) ([]*types.Message, error) {
-	query := `SELECT id, chat_id, sender_id, content, created_at FROM messages WHERE chat_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+	query := `SELECT id, chat_id, sender_id, content, created_at FROM messages WHERE chat_id = $1 ORDER BY created_at ASC LIMIT $2 OFFSET $3`
 	rows, err := s.pool.Query(context.Background(), query, chatID, limit, offset)
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	var messages []*types.Message
@@ -39,6 +41,7 @@ func (s *Store) GetMessages(chatID, limit, offset int) ([]*types.Message, error)
 		var message types.Message
 		if err := rows.Scan(&message.ID, &message.ChatID, &message.SenderID,
 			&message.Content, &message.CreatedAt); err != nil {
+			fmt.Println(err)
 			return nil, err
 		}
 		messages = append(messages, &message)
