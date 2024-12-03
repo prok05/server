@@ -54,7 +54,7 @@ func (s *APIServer) Run() error {
 	lessonHandler := lesson.NewHandler(homeworkStore)
 	lessonHandler.RegisterRoutes(subrouter)
 
-	router.HandleFunc("/ws", ws.Handler(s.hub, messageStore))
+	router.HandleFunc("/ws", ws.Handler(s.hub, messageStore, chatStore, userStore, s.tokenCache))
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"}, // Разрешаем запросы только с фронтенда

@@ -77,7 +77,8 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if role == "teacher" {
-		if err := h.store.SaveMessage(&payload.Message); err != nil {
+		_, err := h.store.SaveMessage(&payload.Message)
+		if err != nil {
 			utils.WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -104,7 +105,8 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		payload.Message.ChatID = chat.ID
 		payload.Message.SenderID = userID
 
-		if err := h.store.SaveMessage(&payload.Message); err != nil {
+		_, err = h.store.SaveMessage(&payload.Message)
+		if err != nil {
 			utils.WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -139,7 +141,7 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
-		limit = 20 // Значение по умолчанию
+		limit = 30 // Значение по умолчанию
 	}
 
 	offset, err := strconv.Atoi(offsetStr)

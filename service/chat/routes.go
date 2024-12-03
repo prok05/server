@@ -67,6 +67,9 @@ func (h *Handler) CreateChat(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusCreated, chat)
 }
 
+// GetAllChats
+// Получение списка чатов в зависимости от роли.
+// Если студент, то получаем список уроков и возвращаем учителей. Если учитель - получаем чаты.
 func (h *Handler) GetAllChats(w http.ResponseWriter, r *http.Request) {
 	tokenString := auth.GetTokenFromRequest(r)
 	if tokenString == "" {
@@ -187,6 +190,8 @@ func (h *Handler) GetChatByID(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// Получение сообщений для студента. Достаем ID студента из токена ID учителя из парамента.
+// Отдаем либо nil, либо список сообщений
 func (h *Handler) GetChatByIDs(w http.ResponseWriter, r *http.Request) {
 	tokenString := auth.GetTokenFromRequest(r)
 	if tokenString == "" {
@@ -233,8 +238,6 @@ func (h *Handler) GetChatByIDs(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-
-	fmt.Println(chat)
 
 	if chat == nil {
 		utils.WriteJSON(w, http.StatusOK, chat)

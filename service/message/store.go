@@ -18,19 +18,20 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	}
 }
 
-func (s *Store) SaveMessage(message *types.Message) error {
-	_, err := s.pool.Exec(context.Background(),
-		"INSERT INTO messages (chat_id, sender_id, content) VALUES ($1, $2, $3)",
-		message.ChatID, message.SenderID, message.Content)
+func (s *Store) SaveMessage(message *types.Message) (int, error) {
+	var messageID int
+	err := s.pool.QueryRow(context.Background(),
+		"INSERT INTO messages (chat_id, sender_id, content) VALUES ($1, $2, $3) RETURNING id",
+		message.ChatID, message.SenderID, message.Content).Scan(&messageID)
 	if err != nil {
 		log.Println(err)
-		return err
+		return 0, err
 	}
-	return nil
+	return messageID, nil
 }
 
 func (s *Store) GetMessages(chatID, limit, offset int) ([]*types.Message, error) {
-	query := `SELECT id, chat_id, sender_id, content, created_at FROM messages WHERE chat_id = $1 ORDER BY created_at ASC LIMIT $2 OFFSET $3`
+	query := `SELECT id, chat_id, sender_id, content, created_at FROM messages WHERE chat_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 	rows, err := s.pool.Query(context.Background(), query, chatID, limit, offset)
 	if err != nil {
 		fmt.Println(err)
@@ -45,6 +46,9 @@ func (s *Store) GetMessages(chatID, limit, offset int) ([]*types.Message, error)
 			return nil, err
 		}
 		messages = append(messages, &message)
+	}
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
 	}
 	return messages, nil
 }

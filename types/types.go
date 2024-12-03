@@ -12,7 +12,7 @@ type UserStore interface {
 }
 
 type MessageStore interface {
-	SaveMessage(message *Message) error
+	SaveMessage(message *Message) (int, error)
 	GetMessages(chatID, limit, offset int) ([]*Message, error)
 	IsUserInChat(chatID int, userID int) (bool, error)
 }
@@ -61,6 +61,7 @@ type UserDTO struct {
 
 type Message struct {
 	ID        int       `json:"id"`
+	TeacherID int       `json:"teacher_id"`
 	ChatID    int       `json:"chat_id"`
 	SenderID  int       `json:"sender_id"`
 	Content   string    `json:"content"`
@@ -68,6 +69,7 @@ type Message struct {
 }
 
 type MessagePayload struct {
+	Type    string  `json:"type"`
 	UserID  int     `json:"user_id"`
 	Message Message `json:"message"`
 }
