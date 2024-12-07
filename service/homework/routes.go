@@ -68,7 +68,7 @@ func (h *Handler) handleUploadHomework(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tempFile, err := os.CreateTemp("../uploads", fmt.Sprintf("homework-*%s", ext))
+	tempFile, err := os.CreateTemp("uploads", fmt.Sprintf("homework-*%s", ext))
 	if err != nil {
 		fmt.Println("createdTemp", err)
 		return
@@ -124,7 +124,7 @@ func (h *Handler) handleAddHomework(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tempFile, err := os.CreateTemp("../uploads", fmt.Sprintf("homework-*%s", ext))
+	tempFile, err := os.CreateTemp("uploads", fmt.Sprintf("homework-*%s", ext))
 	if err != nil {
 		fmt.Println("createdTemp", err)
 		return
@@ -181,23 +181,23 @@ func (h *Handler) handleUpdateHomeworkStatus(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if payload.Status == 1 || payload.Status == 4 {
-		files, err := h.store.GetHomeworkFilesByHomeworkID(homeworkID)
-		if err != nil {
-			log.Println("cant get homework files")
-			utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("cant get homework files"))
-			return
-		}
-		for _, v := range files {
-			_, err = h.store.DeleteHomeworkFileByID(v.ID)
-			if err != nil {
-				log.Println(err)
-			}
-			if err := os.Remove(v.FilePath); err != nil {
-				log.Printf("error deleting file: %v\n", err)
-			}
-		}
-	}
+	//if payload.Status == 1 || payload.Status == 4 {
+	//	files, err := h.store.GetHomeworkFilesByHomeworkID(homeworkID)
+	//	if err != nil {
+	//		log.Println("cant get homework files")
+	//		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("cant get homework files"))
+	//		return
+	//	}
+	//	for _, v := range files {
+	//		_, err = h.store.DeleteHomeworkFileByID(v.ID)
+	//		if err != nil {
+	//			log.Println(err)
+	//		}
+	//		if err := os.Remove(v.FilePath); err != nil {
+	//			log.Printf("error deleting file: %v\n", err)
+	//		}
+	//	}
+	//}
 	utils.WriteJSON(w, http.StatusOK, "ok")
 }
 

@@ -12,3 +12,6 @@ migrate-up:
 
 migrate-down:
 	@go run migrate/main.go down
+
+create-admin:
+	@go run cmd/create_admin/main.go --phone=$(phone) --password=$(password)

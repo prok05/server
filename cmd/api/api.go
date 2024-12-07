@@ -51,7 +51,8 @@ func (s *APIServer) Run() error {
 	homeworkHandler := homework.NewHandler(homeworkStore)
 	homeworkHandler.RegisterRoutes(subrouter)
 
-	lessonHandler := lesson.NewHandler(homeworkStore)
+	lessonStore := lesson.NewStore(s.dbpool)
+	lessonHandler := lesson.NewHandler(homeworkStore, lessonStore, s.tokenCache)
 	lessonHandler.RegisterRoutes(subrouter)
 
 	router.HandleFunc("/ws", ws.Handler(s.hub, messageStore, chatStore, userStore, s.tokenCache))

@@ -39,6 +39,12 @@ type ChatStore interface {
 	GetChatByUserIDs(user1ID, user2ID int) (*Chat, error)
 }
 
+type LessonStore interface {
+	SaveLessonRate(studentID, teacherID, lessonID int, lessonDate time.Time, rate int8) error
+	CheckRateExists(studentID, teacherID, lessonID int) (bool, error)
+	GetLessonRates() ([]LessonRate, error)
+}
+
 type User struct {
 	ID         int       `json:"id"`
 	FirstName  string    `json:"firstName"`
@@ -195,6 +201,29 @@ type GetLessonsResponseItem struct {
 type AllFutureLessonsResponse struct {
 	Count int                      `json:"count"`
 	Items []GetLessonsResponseItem `json:"items"`
+}
+
+type LessonRate struct {
+	ID                int       `json:"id"`
+	StudentID         int       `json:"student_id"`
+	StudentFirstName  string    `json:"student_first_name"`
+	StudentLastName   string    `json:"student_last_name"`
+	StudentMiddleName string    `json:"student_middle_name"`
+	TeacherID         int       `json:"teacher_id"`
+	TeacherFirstName  string    `json:"teacher_first_name"`
+	TeacherLastName   string    `json:"teacher_last_name"`
+	TeacherMiddleName string    `json:"teacher_middle_name"`
+	LessonID          string    `json:"lesson_id"`
+	LessonDate        time.Time `json:"lesson_date"`
+	Rate              int8      `json:"rate"`
+}
+
+type RateLessonPayload struct {
+	StudentID  int       `json:"student_id"`
+	TeacherID  int       `json:"teacher_id"`
+	LessonID   int       `json:"lesson_id"`
+	LessonDate time.Time `json:"lesson_date"`
+	Rate       int8      `json:"rate"`
 }
 
 // HOMEWORK
