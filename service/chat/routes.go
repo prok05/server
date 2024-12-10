@@ -33,6 +33,7 @@ func NewHandler(store types.ChatStore, userStore types.UserStore, messageStore t
 func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/chats", h.CreateChat).Methods("POST")
 	router.HandleFunc("/chats", h.GetAllChats).Methods("GET")
+	router.HandleFunc("/chats/users/{userID}", h.GetAllChatsByUserID).Methods("GET")
 	router.HandleFunc("/chats/{chatID}", h.GetChatByID).Methods("GET")
 	router.HandleFunc("/chats/get/{userID}", h.GetChatByIDs).Methods("GET")
 	router.HandleFunc("/chats/{chatID}", h.DeleteChat).Methods("DELETE")
@@ -129,7 +130,7 @@ func (h *Handler) GetAllChats(w http.ResponseWriter, r *http.Request) {
 
 		utils.WriteJSON(w, http.StatusOK, teachers)
 	} else if role == "teacher" {
-		chats, err := h.store.GetAllChats(userID)
+		chats, err := h.store.GetAllChatsByUserID(userID)
 		if err != nil {
 			log.Println("error getting chats: ", err)
 			utils.WriteError(w, http.StatusInternalServerError, err)
@@ -137,26 +138,55 @@ func (h *Handler) GetAllChats(w http.ResponseWriter, r *http.Request) {
 		}
 		utils.WriteJSON(w, http.StatusOK, chats)
 	}
+}
 
-	//
-	//var chats []types.AllChatsItem
-	//
-	//chats, err = h.store.GetAllChats(userID)
-	//if err != nil {
-	//	utils.WriteError(w, http.StatusInternalServerError, err)
-	//	return
-	//}
-	//
-	//resp := types.AllChatsResponse{
-	//	Count: len(chats),
-	//	Items: chats,
-	//}
-	//
-	//if len(resp.Items) == 0 {
-	//	resp.Items = []types.AllChatsItem{}
-	//}
-	//
+func (h *Handler) GetAllChatsByUserID(w http.ResponseWriter, r *http.Request) {
+	tokenString := auth.GetTokenFromRequest(r)
+	if tokenString == "" {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("missing or invalid JWT token"))
+		return
+	}
 
+	jwtToken, err := auth.ValidateToken(tokenString)
+	if err != nil || !jwtToken.Valid {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid token"))
+		return
+	}
+
+	claims, ok := jwtToken.Claims.(jwt.MapClaims)
+	if !ok {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("no token"))
+		return
+	}
+
+	role, ok := claims["role"].(string)
+	if !ok {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid token"))
+		return
+	}
+
+	if role != "supervisor" {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("cannot get chats"))
+		log.Println("wrong role for getting chats")
+		return
+	}
+
+	vars := mux.Vars(r)
+	userIDVar := vars["userID"]
+	userIDInt, err := strconv.Atoi(userIDVar)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user id"))
+		return
+	}
+
+	chats, err := h.store.GetAllChatsByUserID(userIDInt)
+	if err != nil {
+		log.Println("error getting chats: ", err)
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, chats)
 }
 
 func (h *Handler) GetChatByID(w http.ResponseWriter, r *http.Request) {

@@ -8,6 +8,7 @@ type UserStore interface {
 	FindUserByID(id int) (*UserDTO, error)
 	CreateUser(User) error
 	GetAllTeachers() ([]*UserDTO, error)
+	GetAllStudents() ([]*UserDTO, error)
 	FindUsersByIDs(ids []int) (*[]UserDTO, error)
 }
 
@@ -32,7 +33,7 @@ type HomeworkStore interface {
 
 type ChatStore interface {
 	CreateChat(chat *Chat, participants []int) error
-	GetAllChats(userID int) ([]AllChatsItem, error)
+	GetAllChatsByUserID(userID int) ([]AllChatsItem, error)
 	GetChatByID(chatID int) (*Chat, error)
 	DeleteChat(chatID int) error
 	GetChatParticipants(chatID int) ([]Participant, error)

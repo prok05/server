@@ -39,7 +39,7 @@ func (s *Store) CreateChat(chat *types.Chat, members []int) error {
 	return nil
 }
 
-func (s *Store) GetAllChats(userID int) ([]types.AllChatsItem, error) {
+func (s *Store) GetAllChatsByUserID(userID int) ([]types.AllChatsItem, error) {
 	chats := make([]types.AllChatsItem, 0)
 	query := `
 		SELECT c.id, c.chat_type, c.name, COALESCE(m.content, ''), COALESCE(m.created_at, c.created_at)

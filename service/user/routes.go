@@ -30,6 +30,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/logout", h.handleLogout).Methods(http.MethodPost)
 
 	router.HandleFunc("/users/teachers", h.handleGetAllTeachers).Methods(http.MethodGet)
+	router.HandleFunc("/users/students", h.handleGetAllStudents).Methods(http.MethodGet)
 	router.HandleFunc("/users/{userID}", h.handleGetUser).Methods(http.MethodGet)
 
 	router.HandleFunc("/alpha/users/{userID}", h.handleAlphaGetUser).Methods(http.MethodGet)
@@ -223,6 +224,29 @@ func (h *Handler) handleGetAllTeachers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusOK, teachers)
+}
+
+func (h *Handler) handleGetAllStudents(w http.ResponseWriter, r *http.Request) {
+	tokenString := auth.GetTokenFromRequest(r)
+	if tokenString == "" {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("missing or invalid JWT token"))
+		return
+	}
+
+	jwtToken, err := auth.ValidateToken(tokenString)
+	if err != nil || !jwtToken.Valid {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid token"))
+		return
+	}
+
+	var students []*types.UserDTO
+
+	students, err = h.store.GetAllStudents()
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting teachers"))
+	}
+
+	utils.WriteJSON(w, http.StatusOK, students)
 }
 
 func (h *Handler) handleAlphaGetUser(w http.ResponseWriter, r *http.Request) {

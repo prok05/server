@@ -31,8 +31,8 @@ func (s *Store) SaveMessage(message *types.Message) (int, error) {
 }
 
 func (s *Store) GetMessages(chatID, limit, offset int) ([]*types.Message, error) {
-	query := `SELECT id, chat_id, sender_id, content, created_at FROM messages WHERE chat_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
-	rows, err := s.pool.Query(context.Background(), query, chatID, limit, offset)
+	query := `SELECT id, chat_id, sender_id, content, created_at FROM messages WHERE chat_id = $1 ORDER BY created_at DESC OFFSET $2`
+	rows, err := s.pool.Query(context.Background(), query, chatID, offset)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
