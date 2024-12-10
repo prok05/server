@@ -166,7 +166,7 @@ func Handler(hub *Hub, messageStore types.MessageStore, chatStore types.ChatStor
 			//for _, teacher := range *teachers {
 			//	client.chatIDs[teacher.ID] = true
 			//}
-			chats, err := chatStore.GetAllChats(userID)
+			chats, err := chatStore.GetAllChatsByUserID(userID)
 			if err != nil {
 				log.Printf("Error retrieving user chats: %v", err)
 				http.Error(w, "Failed to retrieve chats", http.StatusInternalServerError)
@@ -176,7 +176,7 @@ func Handler(hub *Hub, messageStore types.MessageStore, chatStore types.ChatStor
 				client.chatIDs[chat.ID] = true
 			}
 		} else if client.role == "teacher" {
-			chats, err := chatStore.GetAllChats(userID)
+			chats, err := chatStore.GetAllChatsByUserID(userID)
 			if err != nil {
 				log.Printf("Error retrieving user chats: %v", err)
 				http.Error(w, "Failed to retrieve chats", http.StatusInternalServerError)
