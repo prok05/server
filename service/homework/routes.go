@@ -68,7 +68,7 @@ func (h *Handler) handleUploadHomework(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tempFile, err := os.CreateTemp("uploads", fmt.Sprintf("homework-*%s", ext))
+	tempFile, err := os.CreateTemp("../uploads", fmt.Sprintf("homework-*%s", ext))
 	if err != nil {
 		fmt.Println("createdTemp", err)
 		return
@@ -124,7 +124,7 @@ func (h *Handler) handleAddHomework(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tempFile, err := os.CreateTemp("uploads", fmt.Sprintf("homework-*%s", ext))
+	tempFile, err := os.CreateTemp("../uploads", fmt.Sprintf("homework-*%s", ext))
 	if err != nil {
 		fmt.Println("createdTemp", err)
 		return

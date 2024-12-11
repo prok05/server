@@ -3,6 +3,7 @@ package user
 import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 	"github.com/prok05/ecom/config"
 	"github.com/prok05/ecom/service/alpha"
@@ -262,6 +263,18 @@ func (h *Handler) handleAlphaGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	claims, ok := jwtToken.Claims.(jwt.MapClaims)
+	if !ok {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("no token"))
+		return
+	}
+
+	role, ok := claims["role"].(string)
+	if !ok {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid token"))
+		return
+	}
+
 	vars := mux.Vars(r)
 	str, ok := vars["userID"]
 	if !ok {
@@ -272,6 +285,18 @@ func (h *Handler) handleAlphaGetUser(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.Atoi(str)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+		return
+	}
+
+	if role == "supervisor" {
+		platformUser, err := h.store.FindUserByID(userID)
+		if err != nil {
+			log.Println(err)
+			utils.WriteError(w, http.StatusNotFound, fmt.Errorf("cant find user in platform"))
+			return
+		}
+
+		utils.WriteJSON(w, http.StatusOK, platformUser)
 		return
 	}
 
