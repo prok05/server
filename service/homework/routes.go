@@ -3,6 +3,7 @@ package homework
 import (
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/prok05/ecom/service/auth"
 	"github.com/prok05/ecom/types"
 	"github.com/prok05/ecom/utils"
 	"io"
@@ -13,20 +14,27 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Handler struct {
-	store types.HomeworkStore
+	store     types.HomeworkStore
+	userStore types.UserStore
 }
 
-func NewHandler(store types.HomeworkStore) *Handler {
-	return &Handler{store: store}
+func NewHandler(store types.HomeworkStore, userStore types.UserStore) *Handler {
+	return &Handler{store: store, userStore: userStore}
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/upload/homework", h.handleUploadHomework).Methods(http.MethodPost)
 	router.HandleFunc("/upload/homework-add", h.handleAddHomework).Methods(http.MethodPost)
-	router.HandleFunc("/homework/teacher", h.GetHomeworkTeacher).Methods(http.MethodPost)
+	//router.HandleFunc("/homework/teacher", h.GetHomeworkTeacher).Methods(http.MethodPost)
+
+	router.HandleFunc("/homework/teacher", h.handleAssignHomework).Methods(http.MethodPost)
+	router.HandleFunc("/homework/teacher", auth.WithJWTAuth(h.handleGetTeacherHomework, h.userStore)).Methods(http.MethodGet)
+
+	router.HandleFunc("/homework/{lessonID}", h.handleGetHomework).Methods(http.MethodGet)
 	router.HandleFunc("/homework/teacher/count", h.CountHomeworkWithStatus).Methods(http.MethodPost)
 	router.HandleFunc("/homework/{homeworkID}", h.handleUpdateHomeworkStatus).Methods(http.MethodPatch)
 	router.HandleFunc("/homework/files/{homeworkID}", h.handleGetHomeworkFiles).Methods(http.MethodGet)
@@ -343,6 +351,101 @@ func (h *Handler) GetHomeworkTeacher(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusOK, homeworks)
+}
+
+func (h *Handler) handleAssignHomework(w http.ResponseWriter, r *http.Request) {
+	r.ParseMultipartForm(50 << 20)
+
+	lessonID, err := strconv.Atoi(r.FormValue("lesson_id"))
+	if err != nil {
+		fmt.Println("wrong lesson_id")
+		return
+	}
+	teacherID, err := strconv.Atoi(r.FormValue("teacher_id"))
+	if err != nil {
+		fmt.Println("wrong teacher_id")
+		return
+	}
+
+	students := r.PostForm["student_ids"]
+	studentIDs, err := utils.StringsToInts(students)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("wrong student ids"))
+		log.Println("wrong studentIDs")
+		return
+	}
+
+	description := r.FormValue("description")
+
+	subjectTitle := r.FormValue("subject_title")
+
+	lessonDate := r.FormValue("lesson_date")
+	lessonDateTime, err := time.Parse(time.RFC3339, lessonDate)
+	if err != nil {
+		log.Println("error while parsing date", err)
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	lessonTopic := r.FormValue("lesson_topic")
+
+	files := r.MultipartForm.File["files"]
+
+	homeworkData := types.HomeworkAssignment{
+		TeacherID:    teacherID,
+		LessonID:     lessonID,
+		StudentIDs:   studentIDs,
+		SubjectTitle: subjectTitle,
+		LessonTopic:  lessonTopic,
+		Description:  description,
+		TeacherFiles: files,
+		LessonDate:   lessonDateTime,
+	}
+
+	_, err = h.store.AssignHomework(homeworkData)
+	if err != nil {
+		log.Println("error while assigning homework:", err)
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusCreated, "ok")
+}
+
+func (h *Handler) handleGetTeacherHomework(w http.ResponseWriter, r *http.Request) {
+	teacherID := auth.GetUserIDFromContext(r.Context())
+
+	homeworks, err := h.store.GetHomeworksByTeacherID(teacherID)
+	if err != nil {
+		log.Printf("failed to retrieve homeworks for teacher: %v", err)
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to retrieve homeworks"))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, homeworks)
+}
+
+func (h *Handler) handleGetHomework(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["lessonID"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing lesson ID"))
+		return
+	}
+
+	lessonID, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid file ID"))
+		return
+	}
+	homework, err := h.store.GetHomeworkByLessonID(lessonID)
+	if err != nil {
+		log.Println("error while getting homework: ", err)
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, homework)
 }
 
 func (h *Handler) CountHomeworkWithStatus(w http.ResponseWriter, r *http.Request) {

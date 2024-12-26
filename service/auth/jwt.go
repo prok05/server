@@ -1,9 +1,12 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/prok05/ecom/config"
+	"github.com/prok05/ecom/types"
+	"github.com/prok05/ecom/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -27,7 +30,42 @@ func CreateJWT(secret []byte, userID int, role string) (string, error) {
 	return tokenString, nil
 }
 
-//func WithJWTAuth(handlerFunc http.HandlerFunc, store)
+func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tokenString := GetTokenFromRequest(r)
+
+		token, err := ValidateToken(tokenString)
+		if err != nil {
+			log.Printf("failed to validate token: %v", err)
+			permissionDenied(w)
+			return
+		}
+
+		if !token.Valid {
+			log.Println("invalid token")
+			permissionDenied(w)
+			return
+		}
+
+		claims := token.Claims.(jwt.MapClaims)
+		str := claims["userID"].(string)
+
+		userID, _ := strconv.Atoi(str)
+
+		u, err := store.FindUserByID(userID)
+		if err != nil {
+			log.Printf("failed to get user by id: %v", err)
+			permissionDenied(w)
+			return
+		}
+
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, "userID", u.ID)
+		r = r.WithContext(ctx)
+
+		handlerFunc(w, r)
+	}
+}
 
 func GetTokenFromRequest(r *http.Request) string {
 	cookie, err := r.Cookie("token")
@@ -45,4 +83,13 @@ func ValidateToken(t string) (*jwt.Token, error) {
 		}
 		return []byte(config.Envs.JWTSecret), nil
 	})
+}
+
+func GetUserIDFromContext(ctx context.Context) int {
+	userID := ctx.Value("userID").(int)
+	return userID
+}
+
+func permissionDenied(w http.ResponseWriter) {
+	utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied"))
 }

@@ -1,6 +1,9 @@
 package types
 
-import "time"
+import (
+	"mime/multipart"
+	"time"
+)
 
 type UserStore interface {
 	FindUserByEmail(email string) (*User, error)
@@ -20,6 +23,7 @@ type MessageStore interface {
 
 type HomeworkStore interface {
 	SaveHomework(lessonID, studentID, teacherID int) (int, error)
+	AssignHomework(data HomeworkAssignment) (int, error)
 	DeleteHomework(homeworkID int) error
 	SaveHomeworkFile(homeworkID int, filepath string) error
 	UpdateHomeworkStatus(homeworkID, status int) error
@@ -29,6 +33,8 @@ type HomeworkStore interface {
 	DeleteHomeworkFileByID(fileID int) (*int, error)
 	GetHomeworkPathByID(fileID int) (string, error)
 	GetHomeworksByTeacherAndLessonID(lessonID, teacherID int, studentIDs []int) ([]HomeworkResponse, error)
+	GetHomeworkByLessonID(lessonID int) (*Homework, error)
+	GetHomeworksByTeacherID(teacherID int) ([]Homework, error)
 }
 
 type ChatStore interface {
@@ -82,12 +88,15 @@ type MessagePayload struct {
 }
 
 type Homework struct {
-	ID         int       `json:"id"`
-	StudentID  int       `json:"student_id"`
-	LessonID   int       `json:"lesson_id"`
-	TeacherID  int       `json:"teacher_id"`
-	FilePath   string    `json:"filepath"`
-	UploadedAt time.Time `json:"uploaded_at"`
+	ID               int       `json:"id"`
+	LessonID         int       `json:"lesson_id"`
+	LessonDate       time.Time `json:"lesson_date"`
+	LessonTopic      string    `json:"lesson_topic"`
+	TeacherID        int       `json:"teacher_id"`
+	SubjectTitle     string    `json:"subject_title"`
+	Description      string    `json:"description"`
+	CreatedAt        time.Time `json:"created_at_at"`
+	UnderReviewCount int       `json:"under_review_count"`
 }
 
 type HomeworkInfo struct {
@@ -234,6 +243,17 @@ type HomeworkPayload struct {
 	LessonID  int   `json:"lesson_id"`
 	Status    int   `json:"status"`
 	Students  []int `json:"student_ids"`
+}
+
+type HomeworkAssignment struct {
+	TeacherID    int
+	LessonID     int
+	StudentIDs   []int
+	SubjectTitle string
+	LessonTopic  string
+	LessonDate   time.Time
+	Description  string
+	TeacherFiles []*multipart.FileHeader
 }
 
 type UpdateHomeworkPayload struct {

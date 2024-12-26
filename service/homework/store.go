@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prok05/ecom/types"
+	"github.com/prok05/ecom/utils"
 	"log"
 )
 
@@ -18,6 +20,65 @@ func NewStore(dbpool *pgxpool.Pool) *Store {
 	return &Store{
 		dbpool: dbpool,
 	}
+}
+
+func (s *Store) AssignHomework(data types.HomeworkAssignment) (int, error) {
+	tx, err := s.dbpool.Begin(context.Background())
+	if err != nil {
+		log.Println("Failed to start transaction: ", err)
+		return 0, err
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback(context.Background())
+		}
+	}()
+
+	var homeworkID int
+	err = tx.QueryRow(context.Background(),
+		`INSERT INTO homeworks (lesson_id, lesson_date, lesson_topic, teacher_id, subject_title, description) 
+		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+		data.LessonID, data.LessonDate, data.LessonTopic, data.TeacherID, data.SubjectTitle, data.Description).Scan(&homeworkID)
+	if err != nil {
+		log.Println("Failed to insert into homeworks:", err)
+		return 0, err
+	}
+
+	for _, fhs := range data.TeacherFiles {
+		path, err := utils.WriteFile(fhs)
+		if err != nil {
+			log.Println("Failed to save teacher file:", err)
+			return 0, err
+		}
+		_, err = tx.Exec(context.Background(),
+			`INSERT INTO homework_teacher_files (homework_id, filepath, filename) 
+			 VALUES ($1, $2, $3)`,
+			homeworkID, path, fhs.Filename)
+		if err != nil {
+			log.Println("Failed to insert teacher file:", err)
+			return 0, err
+		}
+	}
+
+	for _, studentID := range data.StudentIDs {
+		_, err = tx.Exec(context.Background(),
+			`INSERT INTO homework_status (homework_id, student_id, status) 
+			 VALUES ($1, $2, $3)`,
+			homeworkID, studentID, 3)
+		if err != nil {
+			log.Println("Failed to insert homework status:", err)
+			return 0, err
+		}
+	}
+
+	err = tx.Commit(context.Background())
+	if err != nil {
+		log.Println("Failed to commit transaction:", err)
+		return 0, err
+	}
+
+	return homeworkID, nil
 }
 
 func (s *Store) SaveHomework(lessonID, studentID, teacherID int) (int, error) {
@@ -202,4 +263,62 @@ func (s *Store) GetHomeworksByTeacherAndLessonID(lessonID, teacherID int, studen
 	}
 
 	return results, nil
+}
+
+func (s *Store) GetHomeworkByLessonID(lessonID int) (*types.Homework, error) {
+	var homework types.Homework
+	err := s.dbpool.QueryRow(context.Background(), `SELECT * from homeworks WHERE lesson_id = $1`, lessonID).Scan(
+		&homework.ID,
+		&homework.LessonID,
+		&homework.LessonDate,
+		&homework.LessonTopic,
+		&homework.TeacherID,
+		&homework.SubjectTitle,
+		&homework.Description,
+		&homework.CreatedAt)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			log.Println(pgErr.Message)
+			return nil, err
+		}
+	}
+	return &homework, nil
+}
+
+func (s *Store) GetHomeworksByTeacherID(teacherID int) ([]types.Homework, error) {
+	query := `SELECT 
+		    h.id, 
+		    h.lesson_id, 
+		    h.lesson_date, 
+		    h.lesson_topic, 
+		    h.teacher_id, 
+		    h.subject_title, 
+		    h.description, 
+		    h.created_at, 
+		    COALESCE(COUNT(hs.id) FILTER (WHERE hs.status = 2), 0) AS under_review_count
+		FROM 
+		    homeworks h
+		LEFT JOIN 
+		    homework_status hs ON h.id = hs.homework_id
+		WHERE 
+		    h.teacher_id = $1
+		GROUP BY 
+		    h.id`
+	rows, err := s.dbpool.Query(context.Background(), query, teacherID)
+	if err != nil {
+		log.Printf("failed to get homeworks for teacher: %v", err)
+		return nil, err
+	}
+	homeworks, err := pgx.CollectRows(rows, pgx.RowToStructByName[types.Homework])
+	if err != nil {
+		log.Printf("failed to collect homeworks for teacher: %v", err)
+		return nil, err
+	}
+
+	return homeworks, nil
 }

@@ -114,7 +114,7 @@ func (h *Handler) handleGetAllLessonsTeacher(w http.ResponseWriter, r *http.Requ
 	}
 
 	// получение токена alpha CRM
-	alphaToken, err := alpha.GetAlphaToken()
+	alphaToken, err := h.tokenCache.GetToken()
 	if err != nil {
 		log.Printf("error getting alpha token: %v\n", err)
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting alpha token"))

@@ -48,7 +48,7 @@ func (s *APIServer) Run() error {
 	chatHandler.RegisterRoutes(subrouter)
 
 	homeworkStore := homework.NewStore(s.dbpool)
-	homeworkHandler := homework.NewHandler(homeworkStore)
+	homeworkHandler := homework.NewHandler(homeworkStore, userStore)
 	homeworkHandler.RegisterRoutes(subrouter)
 
 	lessonStore := lesson.NewStore(s.dbpool)
