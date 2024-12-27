@@ -296,6 +296,7 @@ type SolutionAssignment struct {
 type HomeworkSolution struct {
 	ID          int            `json:"id,omitempty"`
 	StudentName string         `json:"student_name,omitempty"`
+	StudentID   int            `json:"student_id"`
 	Solution    string         `json:"solution,omitempty"`
 	Status      int            `json:"status"`
 	Files       []SolutionFile `json:"files,omitempty"`

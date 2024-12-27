@@ -537,6 +537,7 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
 	solutionsRows, err := tx.Query(context.Background(), `
         SELECT 
             hs.id AS solution_id,
+            u.id AS student_id,
             u.last_name || ' ' || u.first_name AS student_name,
             hs.solution,
             hs.status,
@@ -556,6 +557,7 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
 
 	type SolutionRow struct {
 		ID          int            `db:"solution_id"`
+		StudentID   int            `db:"student_id"`
 		StudentName string         `db:"student_name"`
 		Solution    sql.NullString `db:"solution"`
 		Status      int            `db:"status"`
@@ -567,12 +569,13 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
 		return nil, fmt.Errorf("failed to collect solutions: %w", err)
 	}
 
-	// Преобразуем решения в карту для удобства группировки файлов
+	// Преобразуем решения в карту для удобства
 	solutionMap := make(map[int]*types.HomeworkSolution)
 	for _, sol := range solutions {
 		solutionMap[sol.ID] = &types.HomeworkSolution{
 			ID:          sol.ID,
 			StudentName: sol.StudentName,
+			StudentID:   sol.StudentID,
 			Solution:    sol.Solution.String,
 			Status:      sol.Status,
 			Files:       []types.SolutionFile{},
@@ -585,7 +588,8 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
         SELECT 
             hf.id AS file_id,
             hf.filename,
-            hf.homework_id
+            hf.filepath,
+            hf.student_id
         FROM 
             homework_files hf
         WHERE 
@@ -596,9 +600,10 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
 	defer filesRows.Close()
 
 	type FileRow struct {
-		FileID     int    `db:"file_id"`
-		FileName   string `db:"filename"`
-		HomeworkID int    `db:"homework_id"`
+		FileID    int    `db:"file_id"`
+		FileName  string `db:"filename"`
+		FilePath  string `db:"filepath"`
+		StudentID int    `db:"student_id"`
 	}
 
 	files, err := pgx.CollectRows(filesRows, pgx.RowToStructByName[FileRow])
@@ -606,13 +611,15 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
 		return nil, fmt.Errorf("failed to collect files: %w", err)
 	}
 
-	// Группируем файлы по решениям
+	// 3. Привязываем файлы к решениям соответствующих студентов
 	for _, file := range files {
-		if solution, exists := solutionMap[file.HomeworkID]; exists {
-			solution.Files = append(solution.Files, types.SolutionFile{
-				ID:       file.FileID,
-				FileName: file.FileName,
-			})
+		for _, solution := range solutionMap {
+			if solution.StudentID == file.StudentID { // Привязка через student_id
+				solution.Files = append(solution.Files, types.SolutionFile{
+					ID:       file.FileID,
+					FileName: file.FileName,
+				})
+			}
 		}
 	}
 
