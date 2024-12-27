@@ -26,15 +26,21 @@ type HomeworkStore interface {
 	AssignHomework(data HomeworkAssignment) (int, error)
 	DeleteHomework(homeworkID int) error
 	SaveHomeworkFile(homeworkID int, filepath string) error
-	UpdateHomeworkStatus(homeworkID, status int) error
+	UpdateSolutionStatus(solutionID, status int) error
 	CountHomeworksWithStatus(lessonID, teacherID, status int) (int, error)
 	GetHomeworksByLessonAndStudentID(studentID int, lessonIDs []int) (map[int]*HomeworkInfo, error)
 	GetHomeworkFilesByHomeworkID(homeworkID int) ([]HomeworkFile, error)
 	DeleteHomeworkFileByID(fileID int) (*int, error)
-	GetHomeworkPathByID(fileID int) (string, error)
+	GetHomeworkTeacherFilePathByID(fileID int) (string, error)
+	GetHomeworkFilePathByID(fileID int) (string, error)
 	GetHomeworksByTeacherAndLessonID(lessonID, teacherID int, studentIDs []int) ([]HomeworkResponse, error)
 	GetHomeworkByLessonID(lessonID int) (*Homework, error)
 	GetHomeworksByTeacherID(teacherID int) ([]Homework, error)
+	GetHomeworksByStudentID(studentID int) ([]HomeworkStudent, error)
+	GetHomeworkSolutions(homeworkID int) (*[]HomeworkSolution, error)
+	GetHomeworkTeacherFiles(homeworkID int) ([]File, error)
+	GetHomeworkSolutionByStudent(homeworkID int, studentID int) (*HomeworkSolution, error)
+	AssignSolution(data SolutionAssignment) error
 }
 
 type ChatStore interface {
@@ -96,13 +102,35 @@ type Homework struct {
 	SubjectTitle     string    `json:"subject_title"`
 	Description      string    `json:"description"`
 	CreatedAt        time.Time `json:"created_at_at"`
-	UnderReviewCount int       `json:"under_review_count"`
+	UnderReviewCount int       `json:"under_review_count,omitempty"`
+}
+
+type HomeworkStudent struct {
+	ID           int       `json:"id"`
+	LessonID     int       `json:"lesson_id"`
+	LessonDate   time.Time `json:"lesson_date"`
+	LessonTopic  string    `json:"lesson_topic"`
+	TeacherID    int       `json:"teacher_id"`
+	SubjectTitle string    `json:"subject_title"`
+	Description  string    `json:"description"`
+	CreatedAt    time.Time `json:"created_at_at"`
+	Status       int       `json:"status"`
+	Files        []File    `json:"files"`
+}
+
+type File struct {
+	ID         int       `json:"id"`
+	FileName   string    `json:"file_name"`
+	FilePath   string    `json:"file_path"`
+	UploadedAt time.Time `json:"uploaded_at"`
 }
 
 type HomeworkInfo struct {
 	ID     *int `json:"id"`
 	Status int  `json:"status"`
 }
+
+// Chats
 
 type Chat struct {
 	ID        int       `json:"id"`
@@ -245,6 +273,7 @@ type HomeworkPayload struct {
 	Students  []int `json:"student_ids"`
 }
 
+// ok
 type HomeworkAssignment struct {
 	TeacherID    int
 	LessonID     int
@@ -256,7 +285,29 @@ type HomeworkAssignment struct {
 	TeacherFiles []*multipart.FileHeader
 }
 
-type UpdateHomeworkPayload struct {
+type SolutionAssignment struct {
+	SolutionID    int                     `json:"solution_id"`
+	HomeworkID    int                     `json:"homework_id"`
+	StudentID     int                     `json:"student_id"`
+	Solution      string                  `json:"solution"`
+	SolutionFiles []*multipart.FileHeader `json:"solution_files"`
+}
+
+type HomeworkSolution struct {
+	ID          int            `json:"id,omitempty"`
+	StudentName string         `json:"student_name,omitempty"`
+	Solution    string         `json:"solution,omitempty"`
+	Status      int            `json:"status"`
+	Files       []SolutionFile `json:"files,omitempty"`
+	UploadedAt  time.Time      `json:"uploaded_at"`
+}
+
+type SolutionFile struct {
+	ID       int    `json:"id"`
+	FileName string `json:"file_name"`
+}
+
+type UpdateSolutionPayload struct {
 	Status int `json:"status"`
 }
 

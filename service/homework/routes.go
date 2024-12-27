@@ -31,12 +31,24 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/upload/homework-add", h.handleAddHomework).Methods(http.MethodPost)
 	//router.HandleFunc("/homework/teacher", h.GetHomeworkTeacher).Methods(http.MethodPost)
 
+	// Преподаватель
 	router.HandleFunc("/homework/teacher", h.handleAssignHomework).Methods(http.MethodPost)
+	router.HandleFunc("/homework/teacher/files/{homeworkID}", h.handleGetHomeworkTeacherFiles).Methods(http.MethodGet)
 	router.HandleFunc("/homework/teacher", auth.WithJWTAuth(h.handleGetTeacherHomework, h.userStore)).Methods(http.MethodGet)
+	router.HandleFunc("/homework/teacher/solutions/{homeworkID}", auth.WithJWTAuth(h.handleGetTeacherHomeworkSolutions, h.userStore)).Methods(http.MethodGet)
+	router.HandleFunc("/homework/solution/{solutionID}", auth.WithJWTAuth(h.handleUpdateSolutionStatus, h.userStore)).Methods(http.MethodPatch)
+	router.HandleFunc("/homework/teacher/file/{fileID}/download", h.handleDownloadTeacherHomeworkFile).Methods(http.MethodGet)
+
+	// Ученик
+	// Получение ДЗ ученика
+	router.HandleFunc("/homework/student", auth.WithJWTAuth(h.handleGetStudentHomework, h.userStore)).Methods(http.MethodGet)
+	// Отправка решения
+	router.HandleFunc("/homework/student/solution", auth.WithJWTAuth(h.handleAssignSolution, h.userStore)).Methods(http.MethodPost)
+	// Получение решения
+	router.HandleFunc("/homework/student/solution/{homeworkID}", auth.WithJWTAuth(h.handleGetStudentSolution, h.userStore)).Methods(http.MethodGet)
 
 	router.HandleFunc("/homework/{lessonID}", h.handleGetHomework).Methods(http.MethodGet)
 	router.HandleFunc("/homework/teacher/count", h.CountHomeworkWithStatus).Methods(http.MethodPost)
-	router.HandleFunc("/homework/{homeworkID}", h.handleUpdateHomeworkStatus).Methods(http.MethodPatch)
 	router.HandleFunc("/homework/files/{homeworkID}", h.handleGetHomeworkFiles).Methods(http.MethodGet)
 	router.HandleFunc("/homework/files/{fileID}", h.handleDeleteHomeworkFiles).Methods(http.MethodDelete)
 	router.HandleFunc("/homework/file/{fileID}/download", h.handleDownloadHomeworkFile).Methods(http.MethodGet)
@@ -154,13 +166,13 @@ func (h *Handler) handleAddHomework(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.store.UpdateHomeworkStatus(homeworkID, 2)
+	err = h.store.UpdateSolutionStatus(homeworkID, 2)
 
 	utils.WriteJSON(w, http.StatusCreated, "ok")
 }
 
-func (h *Handler) handleUpdateHomeworkStatus(w http.ResponseWriter, r *http.Request) {
-	var payload types.UpdateHomeworkPayload
+func (h *Handler) handleUpdateSolutionStatus(w http.ResponseWriter, r *http.Request) {
+	var payload types.UpdateSolutionPayload
 	if err := utils.ParseJSON(r, &payload); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		log.Println("invalid payload")
@@ -168,44 +180,27 @@ func (h *Handler) handleUpdateHomeworkStatus(w http.ResponseWriter, r *http.Requ
 	}
 
 	vars := mux.Vars(r)
-	str, ok := vars["homeworkID"]
+	str, ok := vars["solutionID"]
 	if !ok {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing homework ID"))
-		log.Println("missind homeworkID")
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing solution ID"))
+		log.Println("missing solutionID")
 		return
 	}
 
-	homeworkID, err := strconv.Atoi(str)
+	solutionID, err := strconv.Atoi(str)
 	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user homeworkID"))
-		log.Println("invalid homeworkID")
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid solutionID"))
+		log.Println("invalid solutionID")
 		return
 	}
 
-	err = h.store.UpdateHomeworkStatus(homeworkID, payload.Status)
+	err = h.store.UpdateSolutionStatus(solutionID, payload.Status)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("cannot update homework"))
 		log.Println("cannot update homework")
 		return
 	}
 
-	//if payload.Status == 1 || payload.Status == 4 {
-	//	files, err := h.store.GetHomeworkFilesByHomeworkID(homeworkID)
-	//	if err != nil {
-	//		log.Println("cant get homework files")
-	//		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("cant get homework files"))
-	//		return
-	//	}
-	//	for _, v := range files {
-	//		_, err = h.store.DeleteHomeworkFileByID(v.ID)
-	//		if err != nil {
-	//			log.Println(err)
-	//		}
-	//		if err := os.Remove(v.FilePath); err != nil {
-	//			log.Printf("error deleting file: %v\n", err)
-	//		}
-	//	}
-	//}
 	utils.WriteJSON(w, http.StatusOK, "ok")
 }
 
@@ -248,7 +243,7 @@ func (h *Handler) handleDeleteHomeworkFiles(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	filepath, err := h.store.GetHomeworkPathByID(fileID)
+	filepath, err := h.store.GetHomeworkFilePathByID(fileID)
 	if err != nil {
 		fmt.Println("error getting path")
 		return
@@ -260,24 +255,10 @@ func (h *Handler) handleDeleteHomeworkFiles(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	homeworkID, err := h.store.DeleteHomeworkFileByID(fileID)
+	_, err = h.store.DeleteHomeworkFileByID(fileID)
 	if err != nil {
 		utils.WriteJSON(w, http.StatusInternalServerError, fmt.Errorf("error getting homework files"))
 		return
-	}
-
-	files, err := h.store.GetHomeworkFilesByHomeworkID(*homeworkID)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	if len(files) == 0 {
-		//err = h.store.UpdateHomeworkStatus(*homeworkID, 3)
-		err = h.store.DeleteHomework(*homeworkID)
-		if err != nil {
-			log.Println(err)
-		}
 	}
 
 	utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "file deleted successfully"})
@@ -297,7 +278,63 @@ func (h *Handler) handleDownloadHomeworkFile(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	filepath, err := h.store.GetHomeworkPathByID(fileID)
+	filepath, err := h.store.GetHomeworkFilePathByID(fileID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			utils.WriteError(w, http.StatusNotFound, fmt.Errorf("file not found"))
+		} else {
+			utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting file path"))
+		}
+		return
+	}
+
+	// Открываем файл
+
+	filepath = strings.ReplaceAll(filepath, "\\", "/")
+	filename := path.Base(filepath)
+
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("file not found"))
+		return
+	}
+
+	file, err := os.Open(filepath)
+	if err != nil {
+		log.Printf("error opening file: %v\n", err)
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error opening file"))
+		return
+	}
+	defer file.Close()
+
+	log.Println("filename:", filename)
+
+	// Устанавливаем заголовки для скачивания файла
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	w.Header().Set("Content-Type", "application/octet-stream")
+
+	// Передаем содержимое файла в ответ
+	if _, err := io.Copy(w, file); err != nil {
+		log.Printf("error writing file to response: %v\n", err)
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error writing file to response"))
+		return
+	}
+}
+
+func (h *Handler) handleDownloadTeacherHomeworkFile(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["fileID"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing file ID"))
+		return
+	}
+
+	fileID, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid file ID"))
+		return
+	}
+
+	filepath, err := h.store.GetHomeworkTeacherFilePathByID(fileID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			utils.WriteError(w, http.StatusNotFound, fmt.Errorf("file not found"))
@@ -412,6 +449,67 @@ func (h *Handler) handleAssignHomework(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusCreated, "ok")
 }
 
+func (h *Handler) handleGetHomeworkTeacherFiles(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["homeworkID"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing file ID"))
+		return
+	}
+
+	homeworkID, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid file ID"))
+		return
+	}
+
+	files, err := h.store.GetHomeworkTeacherFiles(homeworkID)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("unable to get homework teacher files"))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, files)
+}
+
+func (h *Handler) handleAssignSolution(w http.ResponseWriter, r *http.Request) {
+	studentID := auth.GetUserIDFromContext(r.Context())
+
+	r.ParseMultipartForm(50 << 20)
+
+	solutionID, err := strconv.Atoi(r.FormValue("solution_id"))
+	if err != nil {
+		fmt.Println("wrong solution_id")
+		return
+	}
+	homeworkID, err := strconv.Atoi(r.FormValue("homework_id"))
+	if err != nil {
+		fmt.Println("wrong homework_id")
+		return
+	}
+
+	solution := r.FormValue("solution")
+
+	files := r.MultipartForm.File["files"]
+
+	solutionData := types.SolutionAssignment{
+		SolutionID:    solutionID,
+		StudentID:     studentID,
+		HomeworkID:    homeworkID,
+		Solution:      solution,
+		SolutionFiles: files,
+	}
+
+	err = h.store.AssignSolution(solutionData)
+	if err != nil {
+		log.Println("error while assigning solution:", err)
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusCreated, "ok")
+}
+
 func (h *Handler) handleGetTeacherHomework(w http.ResponseWriter, r *http.Request) {
 	teacherID := auth.GetUserIDFromContext(r.Context())
 
@@ -423,6 +521,68 @@ func (h *Handler) handleGetTeacherHomework(w http.ResponseWriter, r *http.Reques
 	}
 
 	utils.WriteJSON(w, http.StatusOK, homeworks)
+}
+
+func (h *Handler) handleGetStudentHomework(w http.ResponseWriter, r *http.Request) {
+	studentID := auth.GetUserIDFromContext(r.Context())
+
+	homeworks, err := h.store.GetHomeworksByStudentID(studentID)
+	if err != nil {
+		log.Printf("failed to retrieve homeworks for student: %v", err)
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to retrieve homeworks"))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, homeworks)
+}
+
+func (h *Handler) handleGetStudentSolution(w http.ResponseWriter, r *http.Request) {
+	studentID := auth.GetUserIDFromContext(r.Context())
+
+	vars := mux.Vars(r)
+	str, ok := vars["homeworkID"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing homeworkID"))
+		return
+	}
+
+	homeworkID, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid file ID"))
+		return
+	}
+
+	solution, err := h.store.GetHomeworkSolutionByStudent(homeworkID, studentID)
+	if err != nil {
+		log.Printf("failed to retrieve homeworks for student: %v", err)
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to retrieve homeworks"))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, solution)
+}
+
+func (h *Handler) handleGetTeacherHomeworkSolutions(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["homeworkID"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing homeworkID"))
+		return
+	}
+
+	homeworkID, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid file ID"))
+		return
+	}
+
+	solutions, err := h.store.GetHomeworkSolutions(homeworkID)
+	if err != nil {
+		log.Printf("unable to get homework solutions: %v", err)
+		utils.WriteJSON(w, http.StatusInternalServerError, fmt.Errorf("unable to get homework solutions"))
+		return
+	}
+	utils.WriteJSON(w, http.StatusOK, solutions)
 }
 
 func (h *Handler) handleGetHomework(w http.ResponseWriter, r *http.Request) {
