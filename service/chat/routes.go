@@ -32,7 +32,7 @@ func NewHandler(store types.ChatStore, userStore types.UserStore, messageStore t
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/chats", h.CreateChat).Methods("POST")
-	router.HandleFunc("/chats", h.GetAllChats).Methods("GET")
+	router.HandleFunc("/chats", auth.WithJWTAuth(h.GetAllChats, h.userStore)).Methods("GET")
 	router.HandleFunc("/chats/users/{userID}", h.GetAllChatsByUserID).Methods("GET")
 	router.HandleFunc("/chats/{chatID}", h.GetChatByID).Methods("GET")
 	router.HandleFunc("/chats/get/{userID}", h.GetChatByIDs).Methods("GET")
@@ -72,42 +72,8 @@ func (h *Handler) CreateChat(w http.ResponseWriter, r *http.Request) {
 // Получение списка чатов в зависимости от роли.
 // Если студент, то получаем список уроков и возвращаем учителей. Если учитель - получаем чаты.
 func (h *Handler) GetAllChats(w http.ResponseWriter, r *http.Request) {
-	tokenString := auth.GetTokenFromRequest(r)
-	if tokenString == "" {
-		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("missing or invalid JWT token"))
-		return
-	}
-
-	jwtToken, err := auth.ValidateToken(tokenString)
-	if err != nil || !jwtToken.Valid {
-		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid token"))
-		return
-	}
-
-	claims, ok := jwtToken.Claims.(jwt.MapClaims)
-	if !ok {
-		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("no token"))
-		return
-	}
-
-	userIDStr, ok := claims["userID"].(string)
-	if !ok {
-		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid token"))
-		return
-	}
-
-	role, ok := claims["role"].(string)
-	if !ok {
-		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid token"))
-		return
-	}
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		log.Printf("Unable to convert userID: %v", err)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
+	userID := auth.GetUserIDFromContext(r.Context())
+	role := auth.GetUserRoleFromContext(r.Context())
 
 	if role == "student" {
 		token, err := h.tokenCache.GetToken()
@@ -220,7 +186,7 @@ func (h *Handler) GetChatByID(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// Получение сообщений для студента. Достаем ID студента из токена ID учителя из парамента.
+// Получение сообщений для студента. Достаем ID студента из токена ID учителя из параметра.
 // Отдаем либо nil, либо список сообщений
 func (h *Handler) GetChatByIDs(w http.ResponseWriter, r *http.Request) {
 	tokenString := auth.GetTokenFromRequest(r)

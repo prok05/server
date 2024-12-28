@@ -61,6 +61,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore) http.Handl
 
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, "userID", u.ID)
+		ctx = context.WithValue(ctx, "role", u.Role)
 		r = r.WithContext(ctx)
 
 		handlerFunc(w, r)
@@ -88,6 +89,11 @@ func ValidateToken(t string) (*jwt.Token, error) {
 func GetUserIDFromContext(ctx context.Context) int {
 	userID := ctx.Value("userID").(int)
 	return userID
+}
+
+func GetUserRoleFromContext(ctx context.Context) string {
+	role := ctx.Value("role").(string)
+	return role
 }
 
 func permissionDenied(w http.ResponseWriter) {
