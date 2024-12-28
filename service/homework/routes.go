@@ -582,6 +582,7 @@ func (h *Handler) handleGetTeacherHomeworkSolutions(w http.ResponseWriter, r *ht
 		utils.WriteJSON(w, http.StatusInternalServerError, fmt.Errorf("unable to get homework solutions"))
 		return
 	}
+
 	utils.WriteJSON(w, http.StatusOK, solutions)
 }
 

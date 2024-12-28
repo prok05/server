@@ -256,7 +256,6 @@ func (c *Client) readPump(hub *Hub, messageStore types.MessageStore, chatStore t
 			}
 
 			payload.Message.ID = id
-			fmt.Println(payload.Message)
 			hub.broadcast <- payload.Message
 		}
 	}

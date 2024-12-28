@@ -538,13 +538,13 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
         SELECT 
             hs.id AS solution_id,
             u.id AS student_id,
-            u.last_name || ' ' || u.first_name AS student_name,
+            COALESCE(u.last_name || ' ' || u.first_name, 'Неопознанный ученик') AS student_name,
             hs.solution,
             hs.status,
             hs.updated_at AS uploaded_at
         FROM 
             homework_solutions hs
-        JOIN 
+        LEFT JOIN 
             users u 
         ON 
             hs.student_id = u.id
@@ -557,7 +557,7 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
 
 	type SolutionRow struct {
 		ID          int            `db:"solution_id"`
-		StudentID   int            `db:"student_id"`
+		StudentID   sql.NullInt32  `db:"student_id"` // Изменено
 		StudentName string         `db:"student_name"`
 		Solution    sql.NullString `db:"solution"`
 		Status      int            `db:"status"`
@@ -572,10 +572,19 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
 	// Преобразуем решения в карту для удобства
 	solutionMap := make(map[int]*types.HomeworkSolution)
 	for _, sol := range solutions {
+		studentID := 0
+		studentName := sol.StudentName
+
+		if sol.StudentID.Valid { // Проверяем, есть ли значение
+			studentID = int(sol.StudentID.Int32)
+		} else { // Пользователь отсутствует
+			studentName = "Неопознанный ученик"
+		}
+
 		solutionMap[sol.ID] = &types.HomeworkSolution{
 			ID:          sol.ID,
-			StudentName: sol.StudentName,
-			StudentID:   sol.StudentID,
+			StudentName: studentName,
+			StudentID:   studentID,
 			Solution:    sol.Solution.String,
 			Status:      sol.Status,
 			Files:       []types.SolutionFile{},
@@ -613,13 +622,11 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
 
 	// 3. Привязываем файлы к решениям соответствующих студентов
 	for _, file := range files {
-		for _, solution := range solutionMap {
-			if solution.StudentID == file.StudentID { // Привязка через student_id
-				solution.Files = append(solution.Files, types.SolutionFile{
-					ID:       file.FileID,
-					FileName: file.FileName,
-				})
-			}
+		if solution, ok := solutionMap[file.StudentID]; ok { // Если решение существует для студента
+			solution.Files = append(solution.Files, types.SolutionFile{
+				ID:       file.FileID,
+				FileName: file.FileName,
+			})
 		}
 	}
 
@@ -627,6 +634,10 @@ func (s *Store) GetHomeworkSolutions(homeworkID int) (*[]types.HomeworkSolution,
 	var result []types.HomeworkSolution
 	for _, solution := range solutionMap {
 		result = append(result, *solution)
+	}
+
+	if len(result) == 0 {
+		result = []types.HomeworkSolution{}
 	}
 
 	// Завершаем транзакцию
